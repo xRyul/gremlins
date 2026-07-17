@@ -1,0 +1,10 @@
+{
+  "id": "gremlins",
+  "name": "Gremlins",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Reveal invisible Unicode characters and suspicious indentation in notes.",
+  "author": "xRyul",
+  "authorUrl": "https://github.com/xRyul",
+  "isDesktopOnly": false
+}

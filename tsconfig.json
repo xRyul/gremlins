@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "inlineSourceMap": true,
+    "inlineSources": true,
+    "module": "ESNext",
+    "target": "ES2021",
+    "moduleResolution": "node",
+    "importHelpers": true,
+    "isolatedModules": true,
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "allowImportingTsExtensions": true,
+    "useUnknownInCatchVariables": true,
+    "lib": [
+      "DOM",
+      "ES2021"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "tests/**/*.ts"
+  ]
+}

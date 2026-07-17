@@ -1,0 +1,48 @@
+{
+  "name": "obsidian-gremlins",
+  "version": "0.1.0",
+  "description": "Reveal invisible Unicode characters and suspicious indentation in Obsidian notes.",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "build": "npm run test && npm run typecheck && node esbuild.config.mjs production",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "unicode",
+    "whitespace"
+  ],
+  "author": "xRyul",
+  "license": "MIT",
+  "homepage": "https://github.com/xRyul/gremlins#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xRyul/gremlins.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xRyul/gremlins/issues"
+  },
+  "devDependencies": {
+    "@codemirror/state": "6.5.0",
+    "@codemirror/view": "6.38.6",
+    "@eslint/js": "9.39.4",
+    "@types/node": "24.10.1",
+    "esbuild": "0.25.5",
+    "eslint": "9.39.4",
+    "eslint-plugin-obsidianmd": "0.4.0",
+    "globals": "17.6.0",
+    "jiti": "^2.6.1",
+    "obsidian": "1.12.3",
+    "tsx": "^4.23.1",
+    "typescript": "5.8.3",
+    "typescript-eslint": "8.59.1"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}

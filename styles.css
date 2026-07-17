@@ -1,0 +1,91 @@
+.gremlins-character {
+  border-radius: 2px;
+}
+
+.gremlins-visible-width.gremlins-severity-error {
+  background: rgba(220, 60, 60, 0.3);
+  background: color-mix(in srgb, var(--text-error) 30%, transparent);
+}
+
+.gremlins-visible-width.gremlins-severity-warning {
+  background: rgba(224, 145, 45, 0.28);
+  background: color-mix(in srgb, var(--color-orange) 28%, transparent);
+}
+
+.gremlins-visible-width.gremlins-severity-info {
+  background: rgba(70, 130, 220, 0.24);
+  background: color-mix(in srgb, var(--color-blue) 24%, transparent);
+}
+
+.gremlins-zero-width {
+  border-inline-start: 2px solid currentColor;
+  border-radius: 0;
+  margin-inline-start: -1px;
+}
+
+.gremlins-zero-width.gremlins-severity-error,
+.gremlins-gutter-marker.gremlins-severity-error {
+  color: var(--text-error);
+}
+
+.gremlins-zero-width.gremlins-severity-warning,
+.gremlins-gutter-marker.gremlins-severity-warning {
+  color: var(--color-orange);
+}
+
+.gremlins-zero-width.gremlins-severity-info,
+.gremlins-gutter-marker.gremlins-severity-info {
+  color: var(--color-blue);
+}
+
+.gremlins-mixed-indentation {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent 0,
+    transparent 3px,
+    color-mix(in srgb, var(--color-orange) 45%, transparent) 3px,
+    color-mix(in srgb, var(--color-orange) 45%, transparent) 5px
+  );
+  box-shadow: inset 0 -1px 0 var(--color-orange);
+}
+
+.cm-gutters .gremlins-gutter {
+  order: -1;
+  min-width: 18px;
+}
+
+.gremlins-gutter .cm-gutterElement {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  width: 18px;
+}
+
+.gremlins-gutter-marker {
+  align-items: center;
+  display: inline-flex;
+  height: 14px;
+  justify-content: center;
+  opacity: 0.9;
+  width: 14px;
+}
+
+.gremlins-gutter-marker svg {
+  height: 13px;
+  stroke-width: 2;
+  width: 13px;
+}
+
+.cm-tooltip.cm-tooltip-hover:has(.gremlins-tooltip) {
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-s);
+}
+
+.gremlins-tooltip {
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  max-width: 360px;
+  padding: var(--size-2-2) var(--size-4-2);
+}
