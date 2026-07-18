@@ -77,5 +77,19 @@ export class GremlinsSettingTab extends PluginSettingTab {
             this.updateSettings({ showGutterIcons: value }),
           ),
       );
+
+    new Setting(containerEl)
+      .setName('Click gutter icons to fix')
+      .setDesc(
+        'Replace every gremlin on a line with normalized text when its bug icon is selected.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setDisabled(!this.controller.settings.showGutterIcons)
+          .setValue(this.controller.settings.enableClickToFix)
+          .onChange((value) =>
+            this.updateSettings({ enableClickToFix: value }),
+          ),
+      );
   }
 }

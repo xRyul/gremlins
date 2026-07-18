@@ -1,4 +1,8 @@
-import { RangeSet, RangeSetBuilder, type Extension } from '@codemirror/state';
+import {
+  RangeSet,
+  RangeSetBuilder,
+  type Extension,
+} from '@codemirror/state';
 import {
   Decoration,
   EditorView,
@@ -13,6 +17,10 @@ import {
 import { setIcon } from 'obsidian';
 
 import { detectLineGremlins } from './detect.ts';
+import {
+  buildGremlinFixChanges,
+  isGremlinFixable,
+} from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
 import {
   formatGremlinTooltip,
@@ -22,29 +30,54 @@ import type { GremlinsSettings } from './settings-model.ts';
 import type { GremlinMatch, GremlinSeverity } from './types.ts';
 
 class GremlinGutterMarker extends GutterMarker {
-  constructor(private readonly severity: GremlinSeverity) {
+  constructor(
+    private readonly severity: GremlinSeverity,
+    private readonly interactive: boolean,
+  ) {
     super();
   }
 
   eq(other: GremlinGutterMarker) {
-    return this.severity === other.severity;
+    return (
+      this.severity === other.severity &&
+      this.interactive === other.interactive
+    );
   }
 
   toDOM(view: EditorView) {
     const marker = view.dom.ownerDocument.createElement('span');
     marker.className = `gremlins-gutter-marker gremlins-severity-${this.severity}`;
-    marker.setAttribute('aria-label', 'Line contains one or more gremlins');
-    marker.title = 'Line contains one or more gremlins';
+
+    if (this.interactive) {
+      marker.classList.add('gremlins-gutter-marker-interactive');
+    }
+
+    const label = this.interactive
+      ? 'Fix all gremlins on this line'
+      : 'Line contains one or more gremlins';
+    marker.setAttribute('aria-label', label);
+    marker.title = label;
     setIcon(marker, 'bug');
     return marker;
   }
 }
 
-const GUTTER_MARKERS: Record<GremlinSeverity, GremlinGutterMarker> = {
-  error: new GremlinGutterMarker('error'),
-  info: new GremlinGutterMarker('info'),
-  warning: new GremlinGutterMarker('warning'),
+function createGutterMarkers(interactive: boolean) {
+  return {
+    error: new GremlinGutterMarker('error', interactive),
+    info: new GremlinGutterMarker('info', interactive),
+    warning: new GremlinGutterMarker('warning', interactive),
+  };
+}
+
+const GUTTER_MARKERS = {
+  interactive: createGutterMarkers(true),
+  passive: createGutterMarkers(false),
 };
+
+function getGutterMarkers(interactive: boolean) {
+  return GUTTER_MARKERS[interactive ? 'interactive' : 'passive'];
+}
 
 export function createGremlinsEditorExtension(
   settings: GremlinsSettings,
@@ -110,7 +143,16 @@ export function createGremlinsEditorExtension(
     extensions.push(
       gutter({
         class: 'gremlins-gutter',
-        initialSpacer: () => GUTTER_MARKERS.info,
+        domEventHandlers: settings.enableClickToFix
+          ? {
+              click(view, line, event) {
+                const matches =
+                  view.plugin(gremlinsViewPlugin)?.matches ?? [];
+                return fixGremlinsOnLine(view, line.from, matches, event);
+              },
+            }
+          : undefined,
+        initialSpacer: () => GUTTER_MARKERS.passive.info,
         markers: (view) =>
           view.plugin(gremlinsViewPlugin)?.markers ?? RangeSet.empty,
       }),
@@ -167,7 +209,15 @@ function buildVisibleGremlins(
           const severity = highestSeverity(
             lineMatches.map((match) => match.severity),
           );
-          markerBuilder.add(line.from, line.from, GUTTER_MARKERS[severity]);
+          const isInteractive =
+            settings.enableClickToFix &&
+            lineMatches.some(isGremlinFixable);
+          const gutterMarkers = getGutterMarkers(isInteractive);
+          markerBuilder.add(
+            line.from,
+            line.from,
+            gutterMarkers[severity],
+          );
         }
       }
 
@@ -183,6 +233,79 @@ function buildVisibleGremlins(
     markers: markerBuilder.finish(),
     matches,
   };
+}
+
+function fixGremlinsOnLine(
+  view: EditorView,
+  lineFrom: number,
+  matches: readonly GremlinMatch[],
+  event: Event,
+) {
+  const eventTarget = event.target as Element | null;
+  if (typeof eventTarget?.closest !== 'function') {
+    return false;
+  }
+
+  const marker = eventTarget.closest(
+    '.gremlins-gutter-marker-interactive',
+  );
+  if (!marker) {
+    return false;
+  }
+
+  const line = view.state.doc.lineAt(lineFrom);
+  const lineMatches = matches.filter(
+    (match) => match.line === line.number - 1,
+  );
+  const changes = buildGremlinFixChanges(
+    lineMatches,
+    line.text,
+    line.from,
+  );
+  if (changes.length === 0) {
+    return true;
+  }
+
+  showGremlinExplosion(view, marker, event);
+  view.dispatch({
+    changes,
+    userEvent: 'input.gremlins.fix',
+  });
+  view.focus();
+  return true;
+}
+
+function showGremlinExplosion(
+  view: EditorView,
+  marker: Element,
+  event: Event,
+) {
+  const document = view.dom.ownerDocument;
+  const ownerWindow = document.defaultView;
+  if (ownerWindow?.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+
+  const markerBounds = marker.getBoundingClientRect();
+  const pointerEvent = event as MouseEvent;
+  const fromPointer = pointerEvent.detail > 0;
+  const left = fromPointer
+    ? pointerEvent.clientX
+    : markerBounds.left + markerBounds.width / 2;
+  const top = fromPointer
+    ? pointerEvent.clientY
+    : markerBounds.top + markerBounds.height / 2;
+  const explosion = document.createElement('span');
+  explosion.className = 'gremlins-explosion';
+  explosion.setAttribute('aria-hidden', 'true');
+  explosion.style.left = `${left}px`;
+  explosion.style.top = `${top}px`;
+  document.body.appendChild(explosion);
+
+  explosion.addEventListener('animationend', () => explosion.remove(), {
+    once: true,
+  });
+  ownerWindow?.setTimeout(() => explosion.remove(), 500);
 }
 
 function decorationClasses(match: GremlinMatch) {

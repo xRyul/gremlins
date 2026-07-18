@@ -6,6 +6,7 @@ export interface GremlinDefinition {
   category: GremlinCategory;
   codePoint: number;
   name: string;
+  replacement: string;
   severity: GremlinSeverity;
   zeroWidth: boolean;
 }

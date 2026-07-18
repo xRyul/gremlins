@@ -76,6 +76,75 @@
   width: 13px;
 }
 
+.gremlins-gutter-marker-interactive {
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.gremlins-gutter-marker-interactive:hover {
+  background: var(--background-modifier-hover);
+  opacity: 1;
+}
+
+
+.gremlins-explosion {
+  animation: gremlins-explosion-ring 300ms ease-out forwards;
+  border: 2px solid var(--color-orange);
+  border-radius: 50%;
+  height: 8px;
+  pointer-events: none;
+  position: fixed;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  z-index: var(--layer-tooltip, 1000);
+}
+
+.gremlins-explosion::before {
+  animation: gremlins-explosion-particles 300ms ease-out forwards;
+  background: var(--color-orange);
+  border-radius: 50%;
+  box-shadow:
+    0 -8px var(--text-error),
+    8px 0 var(--color-orange),
+    0 8px var(--text-error),
+    -8px 0 var(--color-orange);
+  content: '';
+  height: 3px;
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+}
+
+@keyframes gremlins-explosion-ring {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.2);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2.5);
+  }
+}
+
+@keyframes gremlins-explosion-particles {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gremlins-explosion {
+    display: none;
+  }
+}
+
 .cm-tooltip.cm-tooltip-hover:has(.gremlins-tooltip) {
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
