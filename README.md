@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/809503f0-1a39-4567-91f3-258359d5f146
+
 # Gremlins for Obsidian
 
 Gremlins reveals invisible or easily confused characters in Obsidian's Markdown editor.
