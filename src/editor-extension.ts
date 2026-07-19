@@ -22,6 +22,7 @@ import {
   isGremlinFixable,
 } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
+import { GREMLIN_ICON_ID } from './gremlin-icon.ts';
 import {
   formatGremlinTooltip,
   highestSeverity,
@@ -57,7 +58,7 @@ class GremlinGutterMarker extends GutterMarker {
       : 'Line contains one or more gremlins';
     marker.setAttribute('aria-label', label);
     marker.title = label;
-    setIcon(marker, 'bug');
+    setIcon(marker, GREMLIN_ICON_ID);
     return marker;
   }
 }

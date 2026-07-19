@@ -1,10 +1,17 @@
 import type { Extension } from '@codemirror/state';
-import { Notice, Plugin, type Editor } from 'obsidian';
+import {
+  addIcon,
+  Notice,
+  Plugin,
+  removeIcon,
+  type Editor,
+} from 'obsidian';
 
 import { detectLineGremlins } from './detect.ts';
 import { createGremlinsEditorExtension } from './editor-extension.ts';
 import { buildGremlinFixChanges } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
+import { GREMLIN_ICON_ID, GREMLIN_ICON_SVG } from './gremlin-icon.ts';
 import { formatGremlinTooltip } from './presentation.ts';
 import {
   DEFAULT_SETTINGS,
@@ -17,6 +24,8 @@ export default class GremlinsPlugin extends Plugin {
   private readonly editorExtensions: Extension[] = [];
 
   async onload() {
+    addIcon(GREMLIN_ICON_ID, GREMLIN_ICON_SVG);
+    this.register(() => removeIcon(GREMLIN_ICON_ID));
     await this.loadSettings();
     this.rebuildEditorExtensions();
     this.registerEditorExtension(this.editorExtensions);
