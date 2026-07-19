@@ -6,9 +6,9 @@ https://github.com/user-attachments/assets/809503f0-1a39-4567-91f3-258359d5f146
 
 Gremlins reveal invisible characters (inluding curly quations marks and em dashes).
 
-Lightweight and loads under `1ms` on most systems.
-Can sit in the background - just load and forget.
-If you ever paste something that has many unicodes, Gremlins flag them. To replace every flagged character on a line, simply squash the Gremlin by clicking its gutter icon.
+Lightweight and loads under `1ms` on most systems.  
+Can sit in the background - just load and forget.  
+If you ever paste something that has many unicodes, Gremlins flag them. To replace every flagged character on a line, simply squash the Gremlin by clicking its gutter icon.  
 
 ![Gremlins highlighting mixed indentation and invisible Unicode characters in Obsidian](images/gremlins-preview.png)
 
@@ -20,7 +20,7 @@ If you ever paste something that has many unicodes, Gremlins flag them. To repla
 
 ## The plugin checks three groups of rules.
 
-### 1. Invisible or potentially dangerous Unicode — enabled by default
+### 1. Invisible or potentially dangerous Unicode - enabled by default
 
 | Unicode | Character | Fix when explicitly requested |
 |---|---|---|
