@@ -49,7 +49,7 @@ Bidirectional controls and invisible characters are highlighted because they can
 
 It detects indentation at the beginning of a line containing **both tabs and spaces**.
 
-When fixed, the indentation becomes spaces while preserving its visual width, assuming four-column tab stops.
+When fixed, indentation made from tabs followed by stray spaces keeps its tabs and removes the trailing spaces. Other mixed indentation becomes spaces while preserving its visual width, assuming four-column tab stops.
 
 It does **not** flag indentation made entirely from tabs or entirely from spaces.
 

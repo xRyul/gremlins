@@ -44,12 +44,20 @@ export function buildGremlinFixChanges(
     );
     changes.push({
       from: match.from,
-      insert: ' '.repeat(indentationWidth(indentation)),
+      insert: normalizeMixedIndentation(indentation),
       to: match.to,
     });
   }
 
   return changes;
+}
+
+function normalizeMixedIndentation(indentation: string) {
+  if (/^\t+ +$/.test(indentation)) {
+    return indentation.replace(/ +$/, '');
+  }
+
+  return ' '.repeat(indentationWidth(indentation));
 }
 
 function indentationWidth(indentation: string) {

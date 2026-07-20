@@ -108,7 +108,7 @@ describe('buildGremlinFixChanges', () => {
     );
   });
 
-  it('converts mixed indentation to spaces without changing its visual width', () => {
+  it('preserves tab indentation when removing multiple trailing spaces', () => {
     const match: GremlinMatch = {
       codePoint: null,
       count: 3,
@@ -122,7 +122,43 @@ describe('buildGremlinFixChanges', () => {
     };
 
     assert.deepEqual(buildGremlinFixChanges([match], '\t  item', 20), [
-      { from: 20, insert: '      ', to: 23 },
+      { from: 20, insert: '\t', to: 23 },
+    ]);
+  });
+
+  it('preserves tab indentation when removing one stray space', () => {
+    const match: GremlinMatch = {
+      codePoint: null,
+      count: 2,
+      from: 20,
+      kind: 'mixed-indentation',
+      line: 2,
+      name: 'mixed indentation',
+      severity: 'warning',
+      to: 22,
+      zeroWidth: false,
+    };
+
+    assert.deepEqual(buildGremlinFixChanges([match], '\t - Item', 20), [
+      { from: 20, insert: '\t', to: 22 },
+    ]);
+  });
+
+  it('converts other mixed indentation to width-preserving spaces', () => {
+    const match: GremlinMatch = {
+      codePoint: null,
+      count: 2,
+      from: 20,
+      kind: 'mixed-indentation',
+      line: 2,
+      name: 'mixed indentation',
+      severity: 'warning',
+      to: 22,
+      zeroWidth: false,
+    };
+
+    assert.deepEqual(buildGremlinFixChanges([match], ' \tItem', 20), [
+      { from: 20, insert: '    ', to: 22 },
     ]);
   });
 
