@@ -70,7 +70,7 @@ describe('buildGremlinFixChanges', () => {
   });
 
   it('replaces typographic punctuation with ASCII equivalents', () => {
-    const line = '“quoted” –';
+    const line = '“quoted” – —';
 
     assert.deepEqual(
       buildGremlinFixChanges(
@@ -78,6 +78,7 @@ describe('buildGremlinFixChanges', () => {
           characterMatch(0x201c, 0, 1),
           characterMatch(0x201d, 7, 8),
           characterMatch(0x2013, 9, 10),
+          characterMatch(0x2014, 11, 12),
         ],
         line,
         0,
@@ -86,6 +87,7 @@ describe('buildGremlinFixChanges', () => {
         { from: 0, insert: '"', to: 1 },
         { from: 7, insert: '"', to: 8 },
         { from: 9, insert: '-', to: 10 },
+        { from: 11, insert: '-', to: 12 },
       ],
     );
   });

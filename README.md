@@ -14,7 +14,7 @@ If you ever paste something that has many unicodes, Gremlins flag them. To repla
 
 ## Features
 
-- Flags invisible or unusual Unicode characters, mixed indentation, and optionally typographic punctuation (curly quotation marks and en dashes). See details below.
+- Flags invisible or unusual Unicode characters, mixed indentation, and optionally typographic punctuation (curly quotation marks, en dashes, and em dashes). See details below.
 - Shows an icon beside every visible line containing a gremlin (optionally, you can click the icon to fix the character immediatly)
 - Works in Source mode and Live Preview.
 
@@ -58,6 +58,7 @@ It does **not** flag indentation made entirely from tabs or entirely from spaces
 | Unicode | Character | Optional replacement |
 |---|---|---|
 | `U+2013` | En dash `–` | Hyphen `-` |
+| `U+2014` | Em dash `—` | Hyphen `-` |
 | `U+2018` / `U+2019` | Curly single quotes `‘ ’` | Straight apostrophe `'` |
 | `U+201C` / `U+201D` | Curly double quotes `“ ”` | Straight quote `"` |
 

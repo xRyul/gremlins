@@ -55,7 +55,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Typographic punctuation')
       .setDesc(
-        'Highlight curly quotation marks and en dashes. Disabled by default because these are common in prose.',
+        'Highlight curly quotation marks, en dashes, and em dashes. Disabled by default because these are common in prose.',
       )
       .addToggle((toggle) =>
         toggle

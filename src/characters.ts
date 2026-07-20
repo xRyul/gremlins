@@ -27,6 +27,7 @@ export const GREMLIN_DEFINITIONS: readonly GremlinDefinition[] = [
   dangerous(0xfeff, 'zero-width no-break space', 'error', true, ''),
   dangerous(0xfffc, 'object replacement character', 'error', true, ''),
   typographic(0x2013, 'en dash', '-'),
+  typographic(0x2014, 'em dash', '-'),
   typographic(0x2018, 'left single quotation mark', "'"),
   typographic(0x2019, 'right single quotation mark', "'"),
   typographic(0x201c, 'left double quotation mark', '"'),

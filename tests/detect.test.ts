@@ -54,6 +54,21 @@ describe('detectGremlins', () => {
     );
   });
 
+  it('flags en and em dashes when typographic punctuation is enabled', () => {
+    const matches = detectGremlins('– —', {
+      ...DEFAULT_SETTINGS,
+      showTypographicCharacters: true,
+    });
+
+    assert.deepEqual(
+      matches.map(({ codePoint, name }) => ({ codePoint, name })),
+      [
+        { codePoint: 0x2013, name: 'en dash' },
+        { codePoint: 0x2014, name: 'em dash' },
+      ],
+    );
+  });
+
   it('flags mixed tabs and spaces in leading indentation', () => {
     const matches = detectGremlins('\t 8. Item', DEFAULT_SETTINGS);
 
