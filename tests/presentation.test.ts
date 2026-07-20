@@ -51,6 +51,23 @@ describe('presentation helpers', () => {
     );
   });
 
+  it('describes malformed list indentation without a Unicode code point', () => {
+    assert.equal(
+      formatGremlinTooltip({
+        codePoint: null,
+        count: 2,
+        from: 0,
+        kind: 'list-indentation',
+        line: 0,
+        name: 'list indentation',
+        severity: 'warning',
+        to: 2,
+        zeroWidth: false,
+      }),
+      'List indentation · 2 leading spaces do not match the configured indent width · Warning',
+    );
+  });
+
   it('selects the highest severity for a gutter marker', () => {
     assert.equal(highestSeverity(['info', 'error', 'warning']), 'error');
     assert.equal(highestSeverity(['info', 'warning']), 'warning');

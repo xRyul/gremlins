@@ -35,6 +35,19 @@ export interface MixedIndentationGremlinMatch {
   zeroWidth: false;
 }
 
+export interface ListIndentationGremlinMatch {
+  codePoint: null;
+  count: number;
+  from: number;
+  kind: 'list-indentation';
+  line: number;
+  name: 'list indentation';
+  severity: 'warning';
+  to: number;
+  zeroWidth: false;
+}
+
 export type GremlinMatch =
   | CharacterGremlinMatch
+  | ListIndentationGremlinMatch
   | MixedIndentationGremlinMatch;

@@ -1,6 +1,6 @@
 {
   "name": "obsidian-gremlins",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Reveal invisible Unicode characters and suspicious indentation in Obsidian notes.",
   "main": "main.js",
   "type": "module",
@@ -28,6 +28,7 @@
     "url": "https://github.com/xRyul/gremlins/issues"
   },
   "devDependencies": {
+    "@codemirror/language": "6.12.4",
     "@codemirror/state": "6.5.0",
     "@codemirror/view": "6.38.6",
     "@eslint/js": "9.39.4",

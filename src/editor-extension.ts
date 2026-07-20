@@ -22,6 +22,10 @@ import {
   isGremlinFixable,
 } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
+import {
+  isMarkdownListItem,
+  markdownSyntaxTreeChanged,
+} from './markdown-context.ts';
 import { GREMLIN_ICON_ID } from './gremlin-icon.ts';
 import {
   formatGremlinTooltip,
@@ -94,7 +98,12 @@ export function createGremlinsEditorExtension(
       }
 
       update(update: ViewUpdate) {
-        if (update.docChanged || update.viewportChanged) {
+        if (
+          update.docChanged ||
+          update.viewportChanged ||
+          update.startState.tabSize !== update.state.tabSize ||
+          markdownSyntaxTreeChanged(update.startState, update.state)
+        ) {
           this.refresh(update.view);
         }
       }
@@ -189,6 +198,8 @@ function buildVisibleGremlins(
           line.from,
           line.number - 1,
           settings,
+          view.state.tabSize,
+          isMarkdownListItem(view.state, line.text, line.from),
         );
         matches.push(...lineMatches);
 
@@ -262,6 +273,7 @@ function fixGremlinsOnLine(
     lineMatches,
     line.text,
     line.from,
+    view.state.tabSize,
   );
   if (changes.length === 0) {
     return true;
@@ -315,6 +327,7 @@ function decorationClasses(match: GremlinMatch) {
     `gremlins-severity-${match.severity}`,
     match.zeroWidth ? 'gremlins-zero-width' : 'gremlins-visible-width',
     match.kind === 'mixed-indentation' ? 'gremlins-mixed-indentation' : '',
+    match.kind === 'list-indentation' ? 'gremlins-list-indentation' : '',
   ]
     .filter(Boolean)
     .join(' ');

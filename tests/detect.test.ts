@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { detectGremlins } from '../src/detect.ts';
+import { detectGremlins, detectLineGremlins } from '../src/detect.ts';
 import { DEFAULT_SETTINGS } from '../src/settings-model.ts';
 
 describe('detectGremlins', () => {
@@ -107,6 +107,100 @@ describe('detectGremlins', () => {
       ...DEFAULT_SETTINGS,
       showMixedIndentation: false,
     });
+
+    assert.deepEqual(matches, []);
+  });
+
+  it('flags list items indented by one, two, or three spaces when enabled', () => {
+    const matches = detectGremlins(
+      ' - one\n  * two\n   1. three\n    - four\n\t- tab',
+      {
+        ...DEFAULT_SETTINGS,
+        showListIndentation: true,
+      },
+      4,
+    );
+
+    assert.deepEqual(
+      matches.map(({ count, kind, line }) => ({ count, kind, line })),
+      [
+        { count: 1, kind: 'list-indentation', line: 0 },
+        { count: 2, kind: 'list-indentation', line: 1 },
+        { count: 3, kind: 'list-indentation', line: 2 },
+      ],
+    );
+  });
+
+  it('flags invalid indentation at deeper list levels', () => {
+    const matches = detectGremlins(
+      '     - five\n      - six\n       - seven\n        - eight',
+      {
+        ...DEFAULT_SETTINGS,
+        showListIndentation: true,
+      },
+      4,
+    );
+
+    assert.deepEqual(
+      matches.map(({ count, line }) => ({ count, line })),
+      [
+        { count: 5, line: 0 },
+        { count: 6, line: 1 },
+        { count: 7, line: 2 },
+      ],
+    );
+  });
+
+  it('uses the current Obsidian indent width for list indentation', () => {
+    const matches = detectGremlins(
+      ' - one\n  - two\n   - three\n    - four',
+      {
+        ...DEFAULT_SETTINGS,
+        showListIndentation: true,
+      },
+      2,
+    );
+
+    assert.deepEqual(
+      matches.map(({ count, line }) => ({ count, line })),
+      [
+        { count: 1, line: 0 },
+        { count: 3, line: 2 },
+      ],
+    );
+  });
+
+  it('does not treat indented non-list content as malformed list indentation', () => {
+    const matches = detectGremlins(
+      '  prose\n   ```ts\n  > quote\n    code()',
+      {
+        ...DEFAULT_SETTINGS,
+        showListIndentation: true,
+      },
+      4,
+    );
+
+    assert.deepEqual(matches, []);
+  });
+
+
+  it('respects the Markdown parser when a list-looking line is not a list', () => {
+    const matches = detectLineGremlins(
+      '  - literal code',
+      0,
+      0,
+      {
+        ...DEFAULT_SETTINGS,
+        showListIndentation: true,
+      },
+      4,
+      false,
+    );
+
+    assert.deepEqual(matches, []);
+  });
+  it('keeps list-indentation warnings disabled by default', () => {
+    const matches = detectGremlins('  - nested', DEFAULT_SETTINGS, 4);
 
     assert.deepEqual(matches, []);
   });

@@ -1,4 +1,4 @@
-import type { Extension } from '@codemirror/state';
+import type { EditorState, Extension } from '@codemirror/state';
 import {
   addIcon,
   Notice,
@@ -12,12 +12,15 @@ import { createGremlinsEditorExtension } from './editor-extension.ts';
 import { buildGremlinFixChanges } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
 import { GREMLIN_ICON_ID, GREMLIN_ICON_SVG } from './gremlin-icon.ts';
+import { isMarkdownListItem } from './markdown-context.ts';
 import { formatGremlinTooltip } from './presentation.ts';
 import {
   DEFAULT_SETTINGS,
   type GremlinsSettings,
 } from './settings-model.ts';
 import { GremlinsSettingTab } from './settings-tab.ts';
+
+const DEFAULT_INDENT_SIZE = 4;
 
 export default class GremlinsPlugin extends Plugin {
   settings: GremlinsSettings = DEFAULT_SETTINGS;
@@ -80,13 +83,29 @@ export default class GremlinsPlugin extends Plugin {
 
     const cursor = editor.getCursor();
     const lineText = editor.getLine(cursor.line);
+    const editorState = getEditorState(editor);
+    const indentSize = getEditorIndentSize(editorState);
+    const isListItem = editorState
+      ? isMarkdownListItem(
+          editorState,
+          lineText,
+          editor.posToOffset({ ch: 0, line: cursor.line }),
+        )
+      : false;
     const matches = detectLineGremlins(
       lineText,
       0,
       cursor.line,
       this.settings,
+      indentSize,
+      isListItem,
     );
-    const changes = buildGremlinFixChanges(matches, lineText, 0);
+    const changes = buildGremlinFixChanges(
+      matches,
+      lineText,
+      0,
+      indentSize,
+    );
     if (changes.length === 0) {
       return false;
     }
@@ -110,11 +129,23 @@ export default class GremlinsPlugin extends Plugin {
 
   private inspectGremlinAtCursor(editor: Editor, checking: boolean) {
     const cursor = editor.getCursor();
+    const lineText = editor.getLine(cursor.line);
+    const editorState = getEditorState(editor);
+    const indentSize = getEditorIndentSize(editorState);
+    const isListItem = editorState
+      ? isMarkdownListItem(
+          editorState,
+          lineText,
+          editor.posToOffset({ ch: 0, line: cursor.line }),
+        )
+      : false;
     const matches = detectLineGremlins(
-      editor.getLine(cursor.line),
+      lineText,
       0,
       cursor.line,
       this.settings,
+      indentSize,
+      isListItem,
     );
     const match =
       findGremlinAtPosition(matches, cursor.ch, 1) ??
@@ -128,4 +159,15 @@ export default class GremlinsPlugin extends Plugin {
     }
     return true;
   }
+}
+
+function getEditorState(editor: Editor) {
+  return (editor as Editor & { cm?: { state?: EditorState } }).cm?.state ?? null;
+}
+
+function getEditorIndentSize(state: EditorState | null) {
+  const tabSize = state?.tabSize;
+  return tabSize && Number.isInteger(tabSize)
+    ? tabSize
+    : DEFAULT_INDENT_SIZE;
 }

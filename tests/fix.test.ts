@@ -27,6 +27,20 @@ function characterMatch(
   };
 }
 
+function listIndentationMatch(count: number): GremlinMatch {
+  return {
+    codePoint: null,
+    count,
+    from: 20,
+    kind: 'list-indentation',
+    line: 2,
+    name: 'list indentation',
+    severity: 'warning',
+    to: 20 + count,
+    zeroWidth: false,
+  };
+}
+
 describe('isGremlinFixable', () => {
   it('provides an automatic fix for every defined gremlin character', () => {
     for (const definition of GREMLIN_DEFINITIONS) {
@@ -36,6 +50,10 @@ describe('isGremlinFixable', () => {
         definition.name,
       );
     }
+  });
+
+  it('provides an automatic fix for malformed list indentation', () => {
+    assert.equal(isGremlinFixable(listIndentationMatch(2)), true);
   });
 });
 
@@ -160,6 +178,59 @@ describe('buildGremlinFixChanges', () => {
     assert.deepEqual(buildGremlinFixChanges([match], ' \tItem', 20), [
       { from: 20, insert: '    ', to: 22 },
     ]);
+  });
+
+  it('rounds list indentation to the nearest four-space level', () => {
+    const cases = [
+      { indentation: ' ', normalized: '' },
+      { indentation: '  ', normalized: '    ' },
+      { indentation: '   ', normalized: '    ' },
+      { indentation: '     ', normalized: '    ' },
+      { indentation: '      ', normalized: '        ' },
+      { indentation: '       ', normalized: '        ' },
+    ];
+
+    for (const { indentation, normalized } of cases) {
+      const match = listIndentationMatch(indentation.length);
+
+      assert.deepEqual(
+        buildGremlinFixChanges(
+          [match],
+          `${indentation}- Item`,
+          20,
+          4,
+        ),
+        [{ from: 20, insert: normalized, to: 20 + indentation.length }],
+      );
+    }
+  });
+
+  it('uses the current indent width while preserving space indentation', () => {
+    const match = listIndentationMatch(3);
+
+    assert.deepEqual(
+      buildGremlinFixChanges([match], '   - Item', 20, 2),
+      [{ from: 20, insert: '    ', to: 23 }],
+    );
+  });
+
+  it('uses the current indent width when measuring mixed indentation', () => {
+    const match: GremlinMatch = {
+      codePoint: null,
+      count: 2,
+      from: 20,
+      kind: 'mixed-indentation',
+      line: 2,
+      name: 'mixed indentation',
+      severity: 'warning',
+      to: 22,
+      zeroWidth: false,
+    };
+
+    assert.deepEqual(
+      buildGremlinFixChanges([match], ' \tItem', 20, 2),
+      [{ from: 20, insert: '  ', to: 22 }],
+    );
   });
 
   it('removes zero-width, joining, and bidi controls', () => {

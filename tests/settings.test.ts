@@ -7,4 +7,8 @@ describe('gremlins settings', () => {
   it('keeps click-to-fix disabled by default', () => {
     assert.equal(DEFAULT_SETTINGS.enableClickToFix, false);
   });
+
+  it('keeps list-indentation warnings disabled by default', () => {
+    assert.equal(DEFAULT_SETTINGS.showListIndentation, false);
+  });
 });

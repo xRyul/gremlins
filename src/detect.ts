@@ -2,9 +2,13 @@ import { GREMLIN_DEFINITIONS_BY_CODE_POINT } from './characters.ts';
 import type { GremlinsSettings } from './settings-model.ts';
 import type { GremlinDefinition, GremlinMatch } from './types.ts';
 
+const DEFAULT_INDENT_SIZE = 4;
+const MARKDOWN_LIST_ITEM = /^( +)(?=(?:[-+*]|\d+[.)])(?:[\t ]|$))/;
+
 export function detectGremlins(
   text: string,
   settings: GremlinsSettings,
+  indentSize = DEFAULT_INDENT_SIZE,
 ): GremlinMatch[] {
   const matches: GremlinMatch[] = [];
   const lines = text.split('\n');
@@ -12,7 +16,9 @@ export function detectGremlins(
 
   for (let line = 0; line < lines.length; line += 1) {
     const lineText = lines[line] ?? '';
-    matches.push(...detectLineGremlins(lineText, lineFrom, line, settings));
+    matches.push(
+      ...detectLineGremlins(lineText, lineFrom, line, settings, indentSize),
+    );
     lineFrom += lineText.length + 1;
   }
 
@@ -24,8 +30,11 @@ export function detectLineGremlins(
   lineFrom: number,
   line: number,
   settings: GremlinsSettings,
+  indentSize = DEFAULT_INDENT_SIZE,
+  isListItem = true,
 ): GremlinMatch[] {
   const matches: GremlinMatch[] = [];
+  const effectiveIndentSize = normalizeIndentSize(indentSize);
 
   if (settings.showMixedIndentation) {
     const indentation = /^[\t ]+/.exec(text)?.[0];
@@ -37,6 +46,26 @@ export function detectLineGremlins(
         kind: 'mixed-indentation',
         line,
         name: 'mixed indentation',
+        severity: 'warning',
+        to: lineFrom + indentation.length,
+        zeroWidth: false,
+      });
+    }
+  }
+
+  if (settings.showListIndentation && isListItem) {
+    const indentation = MARKDOWN_LIST_ITEM.exec(text)?.[1];
+    if (
+      indentation &&
+      indentation.length % effectiveIndentSize !== 0
+    ) {
+      matches.push({
+        codePoint: null,
+        count: indentation.length,
+        from: lineFrom,
+        kind: 'list-indentation',
+        line,
+        name: 'list indentation',
         severity: 'warning',
         to: lineFrom + indentation.length,
         zeroWidth: false,
@@ -88,4 +117,10 @@ function isDefinitionEnabled(
   return definition.category === 'typographic'
     ? settings.showTypographicCharacters
     : settings.showDangerousCharacters;
+}
+
+function normalizeIndentSize(indentSize: number) {
+  return Number.isInteger(indentSize) && indentSize > 0
+    ? indentSize
+    : DEFAULT_INDENT_SIZE;
 }

@@ -17,6 +17,10 @@ export function formatGremlinTooltip(match: GremlinMatch) {
     return `Mixed indentation · Leading indentation contains both tabs and spaces · ${severity}`;
   }
 
+  if (match.kind === 'list-indentation') {
+    return `List indentation · ${match.count} leading ${pluralizeSpaces(match.count)} do not match the configured indent width · ${severity}`;
+  }
+
   const count = match.count > 1 ? `${match.count} ` : '';
   const name = `${match.name}${match.count > 1 ? 's' : ''}`;
   return `${count}${name} · Unicode ${formatCodePoint(match.codePoint)} · ${severity}`;
@@ -30,6 +34,10 @@ export function highestSeverity(
       SEVERITY_RANK[severity] > SEVERITY_RANK[highest] ? severity : highest,
     'info',
   );
+}
+
+function pluralizeSpaces(count: number) {
+  return count === 1 ? 'space' : 'spaces';
 }
 
 function capitalize(value: string) {

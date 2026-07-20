@@ -53,6 +53,19 @@ export class GremlinsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName('List indentation')
+      .setDesc(
+        "Highlight space-indented Markdown list items whose indentation is not a multiple of Obsidian's indent visual width.",
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.controller.settings.showListIndentation)
+          .onChange((value) =>
+            this.updateSettings({ showListIndentation: value }),
+          ),
+      );
+
+    new Setting(containerEl)
       .setName('Typographic punctuation')
       .setDesc(
         'Highlight curly quotation marks, en dashes, and em dashes. Disabled by default because these are common in prose.',

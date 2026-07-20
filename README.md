@@ -14,11 +14,11 @@ If you ever paste something that has many unicodes, Gremlins flag them. To repla
 
 ## Features
 
-- Flags invisible or unusual Unicode characters, mixed indentation, and optionally typographic punctuation (curly quotation marks, en dashes, and em dashes). See details below.
+- Flags invisible or unusual Unicode characters, mixed indentation, malformed list indentation when enabled, and optionally typographic punctuation (curly quotation marks, en dashes, and em dashes). See details below.
 - Shows an icon beside every visible line containing a gremlin (optionally, you can click the icon to fix the character immediatly)
 - Works in Source mode and Live Preview.
 
-## The plugin checks three groups of rules.
+## The plugin checks four groups of rules.
 
 ### 1. Invisible or potentially dangerous Unicode - enabled by default
 
@@ -49,11 +49,19 @@ Bidirectional controls and invisible characters are highlighted because they can
 
 It detects indentation at the beginning of a line containing **both tabs and spaces**.
 
-When fixed, indentation made from tabs followed by stray spaces keeps its tabs and removes the trailing spaces. Other mixed indentation becomes spaces while preserving its visual width, assuming four-column tab stops.
+When fixed, indentation made from tabs followed by stray spaces keeps its tabs and removes the trailing spaces. Other mixed indentation becomes spaces while preserving its visual width using Obsidian's current indent visual width.
 
 It does **not** flag indentation made entirely from tabs or entirely from spaces.
 
-### 3. Typographic punctuation - disabled by default
+### 3. List indentation - disabled by default
+
+It detects space-indented Markdown list items whose indentation is not a multiple of Obsidian's current **Indent visual width** setting. Unordered, ordered, and task list items are supported; indented prose and code are ignored.
+
+When fixed, indentation is rounded to the nearest level, with ties rounded to the deeper level. For a four-space indent width, one space becomes no indentation, two or three spaces become four, five spaces becomes four, and six or seven spaces become eight.
+
+Fixes preserve the line's indentation style: space-indented list items remain spaces, while tab-led mixed indentation keeps its tabs.
+
+### 4. Typographic punctuation - disabled by default
 
 | Unicode | Character | Optional replacement |
 |---|---|---|

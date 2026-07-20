@@ -38,7 +38,8 @@
   color: var(--color-blue);
 }
 
-.gremlins-mixed-indentation {
+.gremlins-mixed-indentation,
+.gremlins-list-indentation {
   background-image: repeating-linear-gradient(
     135deg,
     transparent 0,
