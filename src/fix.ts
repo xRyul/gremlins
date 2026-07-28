@@ -61,20 +61,29 @@ function normalizeMixedIndentation(
   indentation: string,
   indentSize: number,
 ) {
-  if (/^\t+ +$/.test(indentation)) {
-    return indentation.replace(/ +$/, '');
-  }
+  const normalizedWidth = normalizeIndentationWidth(
+    indentationWidth(indentation, indentSize),
+    indentSize,
+  );
 
-  return ' '.repeat(indentationWidth(indentation, indentSize));
+  return indentation.startsWith('\t')
+    ? '\t'.repeat(normalizedWidth / indentSize)
+    : ' '.repeat(normalizedWidth);
 }
 
 function normalizeListIndentation(
   indentation: string,
   indentSize: number,
 ) {
-  const width = indentationWidth(indentation, indentSize);
-  const normalizedWidth = Math.round(width / indentSize) * indentSize;
+  const normalizedWidth = normalizeIndentationWidth(
+    indentationWidth(indentation, indentSize),
+    indentSize,
+  );
   return ' '.repeat(normalizedWidth);
+}
+
+function normalizeIndentationWidth(width: number, indentSize: number) {
+  return Math.round(width / indentSize) * indentSize;
 }
 
 function indentationWidth(indentation: string, indentSize: number) {

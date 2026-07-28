@@ -41,6 +41,20 @@ function listIndentationMatch(count: number): GremlinMatch {
   };
 }
 
+function mixedIndentationMatch(count: number): GremlinMatch {
+  return {
+    codePoint: null,
+    count,
+    from: 20,
+    kind: 'mixed-indentation',
+    line: 2,
+    name: 'mixed indentation',
+    severity: 'warning',
+    to: 20 + count,
+    zeroWidth: false,
+  };
+}
+
 describe('isGremlinFixable', () => {
   it('provides an automatic fix for every defined gremlin character', () => {
     for (const definition of GREMLIN_DEFINITIONS) {
@@ -126,58 +140,48 @@ describe('buildGremlinFixChanges', () => {
     );
   });
 
-  it('preserves tab indentation when removing multiple trailing spaces', () => {
-    const match: GremlinMatch = {
-      codePoint: null,
-      count: 3,
-      from: 20,
-      kind: 'mixed-indentation',
-      line: 2,
-      name: 'mixed indentation',
-      severity: 'warning',
-      to: 23,
-      zeroWidth: false,
-    };
+  it('rounds tab-led mixed indentation while preserving tabs', () => {
+    const cases = [
+      { indentation: '\t ', normalized: '\t' },
+      { indentation: '\t  ', normalized: '\t\t' },
+      { indentation: '\t   ', normalized: '\t\t' },
+      { indentation: '\t    ', normalized: '\t\t' },
+    ];
 
-    assert.deepEqual(buildGremlinFixChanges([match], '\t  item', 20), [
-      { from: 20, insert: '\t', to: 23 },
-    ]);
+    for (const { indentation, normalized } of cases) {
+      const match = mixedIndentationMatch(indentation.length);
+
+      assert.deepEqual(
+        buildGremlinFixChanges(
+          [match],
+          `${indentation}- Item`,
+          20,
+          4,
+        ),
+        [{ from: 20, insert: normalized, to: 20 + indentation.length }],
+      );
+    }
   });
 
-  it('preserves tab indentation when removing one stray space', () => {
-    const match: GremlinMatch = {
-      codePoint: null,
-      count: 2,
-      from: 20,
-      kind: 'mixed-indentation',
-      line: 2,
-      name: 'mixed indentation',
-      severity: 'warning',
-      to: 22,
-      zeroWidth: false,
-    };
+  it('rounds space-led mixed indentation while preserving spaces', () => {
+    const cases = [
+      { indentation: ' \t ', normalized: '    ' },
+      { indentation: ' \t  ', normalized: '        ' },
+    ];
 
-    assert.deepEqual(buildGremlinFixChanges([match], '\t - Item', 20), [
-      { from: 20, insert: '\t', to: 22 },
-    ]);
-  });
+    for (const { indentation, normalized } of cases) {
+      const match = mixedIndentationMatch(indentation.length);
 
-  it('converts other mixed indentation to width-preserving spaces', () => {
-    const match: GremlinMatch = {
-      codePoint: null,
-      count: 2,
-      from: 20,
-      kind: 'mixed-indentation',
-      line: 2,
-      name: 'mixed indentation',
-      severity: 'warning',
-      to: 22,
-      zeroWidth: false,
-    };
-
-    assert.deepEqual(buildGremlinFixChanges([match], ' \tItem', 20), [
-      { from: 20, insert: '    ', to: 22 },
-    ]);
+      assert.deepEqual(
+        buildGremlinFixChanges(
+          [match],
+          `${indentation}- Item`,
+          20,
+          4,
+        ),
+        [{ from: 20, insert: normalized, to: 20 + indentation.length }],
+      );
+    }
   });
 
   it('rounds list indentation to the nearest four-space level', () => {

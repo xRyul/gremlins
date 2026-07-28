@@ -49,7 +49,7 @@ Bidirectional controls and invisible characters are highlighted because they can
 
 It detects indentation at the beginning of a line containing **both tabs and spaces**.
 
-When fixed, indentation made from tabs followed by stray spaces keeps its tabs and removes the trailing spaces. Other mixed indentation becomes spaces while preserving its visual width using Obsidian's current indent visual width.
+When fixed, mixed indentation is rounded to the nearest level using Obsidian's current **Indent visual width**, with ties rounded to the deeper level. Tab-led indentation remains tabs, while space-led indentation becomes spaces. For a four-space indent width, one tab followed by one space becomes one tab, while one tab followed by two, three, or four spaces becomes two tabs.
 
 It does **not** flag indentation made entirely from tabs or entirely from spaces.
 
