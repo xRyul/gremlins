@@ -135,7 +135,11 @@ function listIndentationReason(
     return null;
   }
 
-  if (context === 'plain-text' || context === 'root-list-item') {
+  if (
+    context === 'indented-code' ||
+    context === 'plain-text' ||
+    context === 'root-list-item'
+  ) {
     return 'orphaned' as const;
   }
 

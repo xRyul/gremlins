@@ -55,7 +55,9 @@ It does **not** flag indentation made entirely from tabs or entirely from spaces
 
 ### 3. List indentation - disabled by default
 
-It detects space-indented Markdown list items whose indentation is not a multiple of Obsidian's current **Indent visual width** setting. It also detects space- or tab-indented list markers that have no parent list item, such as an indented list placed directly after top-level prose. Unordered, ordered, and task list items are supported; ordinary indented prose and parser-recognized code are ignored.
+It detects space-indented Markdown list items whose indentation is not a multiple of Obsidian's current **Indent visual width** setting. It also detects space- or tab-indented list markers that have no parent list item, including list-shaped lines that Markdown parses as indented code. Unordered, ordered, and task list items are supported; ordinary indented prose and fenced or inline code are ignored.
+
+Markdown cannot distinguish an accidentally four-space-indented list from indented code containing the same text. Intentional indented-code lines beginning with list markers are therefore also highlighted when this opt-in rule is enabled.
 
 When fixed, an orphaned list marker dedents its entire contiguous indented block by the shared minimum indentation in one edit. This preserves deeper children and continuation lines; blank or unindented lines delimit the block. Other malformed indentation is rounded to the nearest level, with ties rounded to the deeper level. For a four-space indent width, one space becomes no indentation, two or three spaces become four, five spaces becomes four, and six or seven spaces become eight.
 

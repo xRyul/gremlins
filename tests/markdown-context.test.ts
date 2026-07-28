@@ -53,12 +53,19 @@ describe('classifyMarkdownListSyntax', () => {
     );
   });
 
-  it('excludes parser-recognized literal content', () => {
+  it('identifies parser-recognized indented code', () => {
     assert.equal(
       classifyMarkdownListSyntax(
         ['hmd-indented-code_inline-code', 'Document'],
         true,
       ),
+      'indented-code',
+    );
+  });
+
+  it('excludes other parser-recognized literal content', () => {
+    assert.equal(
+      classifyMarkdownListSyntax(['inline-code', 'Document'], true),
       'literal',
     );
   });

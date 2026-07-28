@@ -3,6 +3,7 @@ export type GremlinSeverity = 'info' | 'warning' | 'error';
 export type GremlinCategory = 'dangerous' | 'typographic';
 
 export type MarkdownListContext =
+  | 'indented-code'
   | 'literal'
   | 'nested-list-item'
   | 'plain-text'

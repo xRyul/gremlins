@@ -8,6 +8,7 @@ type MarkdownSyntaxNode = ReturnType<typeof syntaxTree>['topNode'];
 const LIST_MARKER_NODE = /(?:^|_)formatting-list(?:_|$)/;
 const LIST_LINE_LEVEL_NODE =
   /(?:^|_)HyperMD-list-line-(\d+)(?:_|$)/;
+const INDENTED_CODE_NODE = /(?:^|_)hmd-indented-code(?:_|$)/;
 
 export function markdownSyntaxTreeChanged(
   startState: EditorState,
@@ -58,6 +59,10 @@ export function classifyMarkdownListSyntax(
       listLine ? LIST_LINE_LEVEL_NODE.exec(listLine)?.[1] : undefined,
     );
     return level === 1 ? 'root-list-item' : 'nested-list-item';
+  }
+
+  if (nodeNames.some((name) => INDENTED_CODE_NODE.test(name))) {
+    return 'indented-code';
   }
 
   return nodeNames.length > 1 ? 'literal' : 'plain-text';

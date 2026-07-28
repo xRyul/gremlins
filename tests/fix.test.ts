@@ -193,6 +193,47 @@ describe('buildOrphanedListBlockFixChanges', () => {
       ].join('\n'),
     );
   });
+
+  it('dedents separate ordered and unordered blocks beneath headings', () => {
+    const text = [
+      '## Mixed indentation',
+      '',
+      '    1. Valid tab indentation',
+      '    2. Mixed tab and space indentation',
+      '    3. Valid space indentation',
+      '',
+      '## Invisible Unicode',
+      '',
+      '    - Zero-width space between brackets: []',
+      '    - Two zero-width spaces between brackets: []',
+      '    - Zero-width non-joiner between brackets: []',
+      '    - Non-breaking space between brackets: [ ]',
+      '    - Soft hyphen between brackets: []',
+    ].join('\n');
+    const changes = [
+      ...buildOrphanedListBlockFixChanges(text, 2, 4),
+      ...buildOrphanedListBlockFixChanges(text, 8, 4),
+    ];
+
+    assert.equal(
+      applyChanges(text, changes),
+      [
+        '## Mixed indentation',
+        '',
+        '1. Valid tab indentation',
+        '2. Mixed tab and space indentation',
+        '3. Valid space indentation',
+        '',
+        '## Invisible Unicode',
+        '',
+        '- Zero-width space between brackets: []',
+        '- Two zero-width spaces between brackets: []',
+        '- Zero-width non-joiner between brackets: []',
+        '- Non-breaking space between brackets: [ ]',
+        '- Soft hyphen between brackets: []',
+      ].join('\n'),
+    );
+  });
 });
 
 describe('buildGremlinFixChangesForDocument', () => {

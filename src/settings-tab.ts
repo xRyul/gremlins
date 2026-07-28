@@ -55,7 +55,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('List indentation')
       .setDesc(
-        'Highlight malformed list indentation and indented list markers that have no parent list item.',
+        'Highlight malformed list indentation and indented list markers without parent items, including markers parsed as indented code.',
       )
       .addToggle((toggle) =>
         toggle

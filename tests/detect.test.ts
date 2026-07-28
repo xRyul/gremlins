@@ -298,6 +298,38 @@ describe('detectGremlins', () => {
     );
   });
 
+  it('flags list markers parsed as indented code', () => {
+    const matches = [
+      '    1. ordered item',
+      '    - unordered item',
+    ].flatMap((text, line) =>
+      detectLineGremlins(
+        text,
+        0,
+        line,
+        {
+          ...DEFAULT_SETTINGS,
+          showListIndentation: true,
+        },
+        4,
+        'indented-code',
+      ),
+    );
+
+    assert.deepEqual(
+      matches.map((match) => ({
+        count: match.count,
+        line: match.line,
+        reason:
+          match.kind === 'list-indentation' ? match.reason : null,
+      })),
+      [
+        { count: 4, line: 0, reason: 'orphaned' },
+        { count: 4, line: 1, reason: 'orphaned' },
+      ],
+    );
+  });
+
   it('preserves an aligned list item that has a parent item', () => {
     const matches = detectLineGremlins(
       '    - nested item',
