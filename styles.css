@@ -51,15 +51,16 @@
 }
 
 .cm-gutters > .gremlins-gutter {
+  inset-inline-start: -18px;
   margin-inline-end: -18px;
   min-width: 18px;
-  order: 1;
+  order: -1;
   position: relative;
 }
 
-/* With no other gutter, place the icon in the editor's left padding. */
-.cm-gutters > .gremlins-gutter:only-child {
-  inset-inline-start: -18px;
+/* Use the outer part of Obsidian's folding space when no other gutter exists. */
+.markdown-source-view.mod-cm6.is-folding .cm-gutters > .gremlins-gutter:only-child {
+  inset-inline-start: calc(-1 * (var(--file-folding-offset, 24px) + 8px));
 }
 
 /* A lone Gremlins gutter should not trigger Obsidian's folding offset. */
