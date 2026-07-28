@@ -18,7 +18,7 @@ import { setIcon } from 'obsidian';
 
 import { detectLineGremlins } from './detect.ts';
 import {
-  buildGremlinFixChanges,
+  buildGremlinFixChangesForDocument,
   isGremlinFixable,
 } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
@@ -58,7 +58,7 @@ class GremlinGutterMarker extends GutterMarker {
     }
 
     const label = this.interactive
-      ? 'Fix all gremlins on this line'
+      ? 'Fix highlighted gremlins'
       : 'Line contains one or more gremlins';
     marker.setAttribute('aria-label', label);
     marker.title = label;
@@ -269,10 +269,12 @@ function fixGremlinsOnLine(
   const lineMatches = matches.filter(
     (match) => match.line === line.number - 1,
   );
-  const changes = buildGremlinFixChanges(
+  const changes = buildGremlinFixChangesForDocument(
     lineMatches,
+    view.state.doc.toString(),
     line.text,
     line.from,
+    line.number - 1,
     view.state.tabSize,
   );
   if (changes.length === 0) {

@@ -57,9 +57,9 @@ It does **not** flag indentation made entirely from tabs or entirely from spaces
 
 It detects space-indented Markdown list items whose indentation is not a multiple of Obsidian's current **Indent visual width** setting. It also detects space- or tab-indented list markers that have no parent list item, such as an indented list placed directly after top-level prose. Unordered, ordered, and task list items are supported; ordinary indented prose and parser-recognized code are ignored.
 
-Orphaned list markers are warning-only because their intended relative hierarchy cannot be inferred safely. Other malformed indentation is rounded to the nearest level when fixed, with ties rounded to the deeper level. For a four-space indent width, one space becomes no indentation, two or three spaces become four, five spaces becomes four, and six or seven spaces become eight.
+When fixed, an orphaned list marker dedents its entire contiguous indented block by the shared minimum indentation in one edit. This preserves deeper children and continuation lines; blank or unindented lines delimit the block. Other malformed indentation is rounded to the nearest level, with ties rounded to the deeper level. For a four-space indent width, one space becomes no indentation, two or three spaces become four, five spaces becomes four, and six or seven spaces become eight.
 
-Fixes preserve the line's indentation style: space-indented list items remain spaces, while tab-led mixed indentation keeps its tabs.
+Fixes retain relative visual indentation and prefer each line's existing tab- or space-led style.
 
 ### 4. Typographic punctuation - disabled by default
 

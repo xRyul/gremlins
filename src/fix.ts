@@ -2,6 +2,13 @@ import { GREMLIN_DEFINITIONS_BY_CODE_POINT } from './characters.ts';
 import type { GremlinMatch } from './types.ts';
 
 const DEFAULT_INDENT_SIZE = 4;
+const MARKDOWN_LIST_MARKER = /^(?:[-+*]|\d+[.)])(?:[\t ]|$)/;
+
+interface DocumentLine {
+  from: number;
+  indentation: string | null;
+  text: string;
+}
 
 export interface GremlinFixChange {
   from: number;
@@ -11,7 +18,7 @@ export interface GremlinFixChange {
 
 export function isGremlinFixable(match: GremlinMatch) {
   if (match.kind === 'list-indentation') {
-    return match.reason === 'misaligned';
+    return true;
   }
 
   return (
@@ -68,6 +75,102 @@ export function buildGremlinFixChanges(
   return changes;
 }
 
+export function buildGremlinFixChangesForDocument(
+  matches: readonly GremlinMatch[],
+  documentText: string,
+  lineText: string,
+  lineFrom: number,
+  line: number,
+  indentSize = DEFAULT_INDENT_SIZE,
+): GremlinFixChange[] {
+  const orphanedListMatch = matches.find(
+    (match) =>
+      match.kind === 'list-indentation' &&
+      match.reason === 'orphaned',
+  );
+  const directMatches = orphanedListMatch
+    ? matches.filter((match) => match.kind === 'character')
+    : matches;
+  const changes = buildGremlinFixChanges(
+    directMatches,
+    lineText,
+    lineFrom,
+    indentSize,
+  );
+
+  if (orphanedListMatch) {
+    changes.push(
+      ...buildOrphanedListBlockFixChanges(
+        documentText,
+        line,
+        indentSize,
+      ),
+    );
+  }
+
+  return changes.sort((left, right) => left.from - right.from);
+}
+
+export function buildOrphanedListBlockFixChanges(
+  documentText: string,
+  targetLine: number,
+  indentSize = DEFAULT_INDENT_SIZE,
+): GremlinFixChange[] {
+  const effectiveIndentSize = normalizeIndentSize(indentSize);
+  const lines = documentLines(documentText);
+  const target = lines[targetLine];
+
+  if (
+    !target?.indentation ||
+    !MARKDOWN_LIST_MARKER.test(
+      target.text.slice(target.indentation.length),
+    )
+  ) {
+    return [];
+  }
+
+  let blockStart = targetLine;
+  while (blockStart > 0 && lines[blockStart - 1]?.indentation) {
+    blockStart -= 1;
+  }
+
+  let blockEnd = targetLine;
+  while (
+    blockEnd + 1 < lines.length &&
+    lines[blockEnd + 1]?.indentation
+  ) {
+    blockEnd += 1;
+  }
+
+  const blockLines = lines.slice(blockStart, blockEnd + 1);
+  const sharedIndentationWidth = Math.min(
+    ...blockLines.map((line) =>
+      indentationWidth(line.indentation ?? '', effectiveIndentSize),
+    ),
+  );
+
+  if (sharedIndentationWidth <= 0) {
+    return [];
+  }
+
+  return blockLines.map((line) => {
+    const indentation = line.indentation ?? '';
+    const remainingWidth =
+      indentationWidth(indentation, effectiveIndentSize) -
+      sharedIndentationWidth;
+
+    return {
+      from: line.from,
+      insert: indentationForWidth(
+        remainingWidth,
+        indentation.startsWith('\t'),
+        effectiveIndentSize,
+      ),
+      to: line.from + indentation.length,
+    };
+  });
+}
+
 function normalizeMixedIndentation(
   indentation: string,
   indentSize: number,
@@ -108,6 +211,39 @@ function indentationWidth(indentation: string, indentSize: number) {
   }
 
   return width;
+}
+
+function documentLines(documentText: string): DocumentLine[] {
+  let from = 0;
+
+  return documentText.split('\n').map((text) => {
+    const indentation = leadingIndentation(text);
+    const line = { from, indentation, text };
+    from += text.length + 1;
+    return line;
+  });
+}
+
+function leadingIndentation(text: string) {
+  const indentation = /^[\t ]+/.exec(text)?.[0];
+  return indentation && text.slice(indentation.length).trim().length > 0
+    ? indentation
+    : null;
+}
+
+function indentationForWidth(
+  width: number,
+  preferTabs: boolean,
+  indentSize: number,
+) {
+  if (!preferTabs) {
+    return ' '.repeat(width);
+  }
+
+  return (
+    '\t'.repeat(Math.floor(width / indentSize)) +
+    ' '.repeat(width % indentSize)
+  );
 }
 
 function normalizeIndentSize(indentSize: number) {

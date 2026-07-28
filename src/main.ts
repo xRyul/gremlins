@@ -9,7 +9,7 @@ import {
 
 import { detectLineGremlins } from './detect.ts';
 import { createGremlinsEditorExtension } from './editor-extension.ts';
-import { buildGremlinFixChanges } from './fix.ts';
+import { buildGremlinFixChangesForDocument } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
 import { GREMLIN_ICON_ID, GREMLIN_ICON_SVG } from './gremlin-icon.ts';
 import { getMarkdownListContext } from './markdown-context.ts';
@@ -41,7 +41,7 @@ export default class GremlinsPlugin extends Plugin {
     });
     this.addCommand({
       id: 'fix-current-line',
-      name: 'Fix current line',
+      name: 'Fix current line or orphaned list block',
       editorCheckCallback: (checking, editor) =>
         this.fixGremlinsOnCurrentLine(editor, checking),
     });
@@ -83,27 +83,31 @@ export default class GremlinsPlugin extends Plugin {
 
     const cursor = editor.getCursor();
     const lineText = editor.getLine(cursor.line);
+    const lineFrom = editor.posToOffset({ ch: 0, line: cursor.line });
     const editorState = getEditorState(editor);
     const indentSize = getEditorIndentSize(editorState);
     const listContext = editorState
-      ? getMarkdownListContext(
-          editorState,
-          lineText,
-          editor.posToOffset({ ch: 0, line: cursor.line }),
-        )
+      ? getMarkdownListContext(editorState, lineText, lineFrom)
       : 'unknown';
     const matches = detectLineGremlins(
       lineText,
-      0,
+      lineFrom,
       cursor.line,
       this.settings,
       indentSize,
       listContext,
     );
-    const changes = buildGremlinFixChanges(
+    const hasOrphanedList = matches.some(
+      (match) =>
+        match.kind === 'list-indentation' &&
+        match.reason === 'orphaned',
+    );
+    const changes = buildGremlinFixChangesForDocument(
       matches,
+      editor.getValue(),
       lineText,
-      0,
+      lineFrom,
+      cursor.line,
       indentSize,
     );
     if (changes.length === 0) {
@@ -114,15 +118,19 @@ export default class GremlinsPlugin extends Plugin {
       editor.transaction(
         {
           changes: changes.map((change) => ({
-            from: { ch: change.from, line: cursor.line },
+            from: editor.offsetToPos(change.from),
             text: change.insert,
-            to: { ch: change.to, line: cursor.line },
+            to: editor.offsetToPos(change.to),
           })),
         },
         'gremlins',
       );
       editor.focus();
-      new Notice(`Fixed gremlins on line ${cursor.line + 1}.`);
+      new Notice(
+        hasOrphanedList
+          ? `Fixed orphaned list block at line ${cursor.line + 1}.`
+          : `Fixed gremlins on line ${cursor.line + 1}.`,
+      );
     }
     return true;
   }

@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import { GREMLIN_DEFINITIONS } from '../src/characters.ts';
 import {
   buildGremlinFixChanges,
+  buildGremlinFixChangesForDocument,
+  buildOrphanedListBlockFixChanges,
   isGremlinFixable,
 } from '../src/fix.ts';
 import type { GremlinMatch } from '../src/types.ts';
@@ -59,6 +61,21 @@ function mixedIndentationMatch(count: number): GremlinMatch {
   };
 }
 
+function applyChanges(
+  text: string,
+  changes: readonly { from: number; insert: string; to: number }[],
+) {
+  return [...changes]
+    .sort((left, right) => right.from - left.from)
+    .reduce(
+      (result, change) =>
+        result.slice(0, change.from) +
+        change.insert +
+        result.slice(change.to),
+      text,
+    );
+}
+
 describe('isGremlinFixable', () => {
   it('provides an automatic fix for every defined gremlin character', () => {
     for (const definition of GREMLIN_DEFINITIONS) {
@@ -74,10 +91,148 @@ describe('isGremlinFixable', () => {
     assert.equal(isGremlinFixable(listIndentationMatch(2)), true);
   });
 
-  it('does not automatically fix orphaned list markers', () => {
+  it('provides a block-aware fix for orphaned list markers', () => {
     assert.equal(
       isGremlinFixable(listIndentationMatch(4, 'orphaned')),
-      false,
+      true,
+    );
+  });
+});
+
+describe('buildOrphanedListBlockFixChanges', () => {
+  it('dedents a tab-indented block while preserving nested children', () => {
+    const text = [
+      'Common issues:',
+      '\t- Parent',
+      '\t\t- Child',
+      '\t- Sibling',
+      'After',
+    ].join('\n');
+
+    const changes = buildOrphanedListBlockFixChanges(text, 1, 4);
+
+    assert.equal(
+      applyChanges(text, changes),
+      [
+        'Common issues:',
+        '- Parent',
+        '\t- Child',
+        '- Sibling',
+        'After',
+      ].join('\n'),
+    );
+  });
+
+  it('removes shared spaces without flattening deeper list items', () => {
+    const text = [
+      'Common issues:',
+      '    - Lack of clarity',
+      '    - Requirements confusion',
+      '        - Functional requirements',
+      '        - Non-functional requirements',
+      '    - Over-flexibility',
+      'After',
+    ].join('\n');
+
+    const changes = buildOrphanedListBlockFixChanges(text, 3, 4);
+
+    assert.equal(
+      applyChanges(text, changes),
+      [
+        'Common issues:',
+        '- Lack of clarity',
+        '- Requirements confusion',
+        '    - Functional requirements',
+        '    - Non-functional requirements',
+        '- Over-flexibility',
+        'After',
+      ].join('\n'),
+    );
+  });
+
+  it('preserves relative indentation on continuation lines', () => {
+    const text = [
+      'Common issues:',
+      '    - Item',
+      '      continuation',
+      '        - Child',
+      'After',
+    ].join('\n');
+
+    const changes = buildOrphanedListBlockFixChanges(text, 1, 4);
+
+    assert.equal(
+      applyChanges(text, changes),
+      [
+        'Common issues:',
+        '- Item',
+        '  continuation',
+        '    - Child',
+        'After',
+      ].join('\n'),
+    );
+  });
+
+  it('does not cross blank-line block boundaries', () => {
+    const text = [
+      'Common issues:',
+      '    - First block',
+      '',
+      '    - Second block',
+    ].join('\n');
+
+    const changes = buildOrphanedListBlockFixChanges(text, 1, 4);
+
+    assert.equal(
+      applyChanges(text, changes),
+      [
+        'Common issues:',
+        '- First block',
+        '',
+        '    - Second block',
+      ].join('\n'),
+    );
+  });
+});
+
+describe('buildGremlinFixChangesForDocument', () => {
+  it('combines an orphaned block fix with character fixes on the line', () => {
+    const text = [
+      'Common issues:',
+      '\t- Item —',
+      '\t- Next',
+    ].join('\n');
+    const lineText = '\t- Item —';
+    const lineFrom = text.indexOf(lineText);
+    const dashFrom = text.indexOf('—');
+    const orphanedListMatch: GremlinMatch = {
+      codePoint: null,
+      count: 1,
+      from: lineFrom,
+      kind: 'list-indentation',
+      line: 1,
+      name: 'list indentation',
+      reason: 'orphaned',
+      severity: 'warning',
+      to: lineFrom + 1,
+      zeroWidth: false,
+    };
+
+    const changes = buildGremlinFixChangesForDocument(
+      [
+        orphanedListMatch,
+        characterMatch(0x2014, dashFrom, dashFrom + 1),
+      ],
+      text,
+      lineText,
+      lineFrom,
+      1,
+      4,
+    );
+
+    assert.equal(
+      applyChanges(text, changes),
+      ['Common issues:', '- Item -', '- Next'].join('\n'),
     );
   });
 });

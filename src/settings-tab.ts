@@ -94,7 +94,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Click gutter icons to fix')
       .setDesc(
-        'Replace every safely fixable gremlin on a line with normalized text when its bug icon is selected.',
+        'Fix highlighted gremlins. Orphaned list markers dedent their contiguous block together.',
       )
       .addToggle((toggle) =>
         toggle
