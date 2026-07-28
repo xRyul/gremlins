@@ -23,7 +23,7 @@ import {
 } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
 import {
-  isMarkdownListItem,
+  getMarkdownListContext,
   markdownSyntaxTreeChanged,
 } from './markdown-context.ts';
 import { GREMLIN_ICON_ID } from './gremlin-icon.ts';
@@ -199,7 +199,7 @@ function buildVisibleGremlins(
           line.number - 1,
           settings,
           view.state.tabSize,
-          isMarkdownListItem(view.state, line.text, line.from),
+          getMarkdownListContext(view.state, line.text, line.from),
         );
         matches.push(...lineMatches);
 

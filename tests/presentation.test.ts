@@ -60,11 +60,30 @@ describe('presentation helpers', () => {
         kind: 'list-indentation',
         line: 0,
         name: 'list indentation',
+        reason: 'misaligned',
         severity: 'warning',
         to: 2,
         zeroWidth: false,
       }),
       'List indentation · 2 leading spaces do not match the configured indent width · Warning',
+    );
+  });
+
+  it('describes an indented list marker without a parent item', () => {
+    assert.equal(
+      formatGremlinTooltip({
+        codePoint: null,
+        count: 4,
+        from: 0,
+        kind: 'list-indentation',
+        line: 0,
+        name: 'list indentation',
+        reason: 'orphaned',
+        severity: 'warning',
+        to: 4,
+        zeroWidth: false,
+      }),
+      'List indentation · Indented list marker has no parent list item · Warning',
     );
   });
 

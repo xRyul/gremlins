@@ -27,7 +27,10 @@ function characterMatch(
   };
 }
 
-function listIndentationMatch(count: number): GremlinMatch {
+function listIndentationMatch(
+  count: number,
+  reason: 'misaligned' | 'orphaned' = 'misaligned',
+): GremlinMatch {
   return {
     codePoint: null,
     count,
@@ -35,6 +38,7 @@ function listIndentationMatch(count: number): GremlinMatch {
     kind: 'list-indentation',
     line: 2,
     name: 'list indentation',
+    reason,
     severity: 'warning',
     to: 20 + count,
     zeroWidth: false,
@@ -68,6 +72,13 @@ describe('isGremlinFixable', () => {
 
   it('provides an automatic fix for malformed list indentation', () => {
     assert.equal(isGremlinFixable(listIndentationMatch(2)), true);
+  });
+
+  it('does not automatically fix orphaned list markers', () => {
+    assert.equal(
+      isGremlinFixable(listIndentationMatch(4, 'orphaned')),
+      false,
+    );
   });
 });
 
@@ -207,6 +218,15 @@ describe('buildGremlinFixChanges', () => {
         [{ from: 20, insert: normalized, to: 20 + indentation.length }],
       );
     }
+  });
+
+  it('does not automatically change orphaned list indentation', () => {
+    const match = listIndentationMatch(4, 'orphaned');
+
+    assert.deepEqual(
+      buildGremlinFixChanges([match], '    - Item', 20, 4),
+      [],
+    );
   });
 
   it('uses the current indent width while preserving space indentation', () => {

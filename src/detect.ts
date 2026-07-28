@@ -1,9 +1,14 @@
 import { GREMLIN_DEFINITIONS_BY_CODE_POINT } from './characters.ts';
 import type { GremlinsSettings } from './settings-model.ts';
-import type { GremlinDefinition, GremlinMatch } from './types.ts';
+import type {
+  GremlinDefinition,
+  GremlinMatch,
+  MarkdownListContext,
+} from './types.ts';
 
 const DEFAULT_INDENT_SIZE = 4;
-const MARKDOWN_LIST_ITEM = /^( +)(?=(?:[-+*]|\d+[.)])(?:[\t ]|$))/;
+const MARKDOWN_LIST_ITEM = /^([\t ]+)(?=(?:[-+*]|\d+[.)])(?:[\t ]|$))/;
+const PARSERLESS_LIST_CONTEXT: MarkdownListContext = 'nested-list-item';
 
 export function detectGremlins(
   text: string,
@@ -17,7 +22,14 @@ export function detectGremlins(
   for (let line = 0; line < lines.length; line += 1) {
     const lineText = lines[line] ?? '';
     matches.push(
-      ...detectLineGremlins(lineText, lineFrom, line, settings, indentSize),
+      ...detectLineGremlins(
+        lineText,
+        lineFrom,
+        line,
+        settings,
+        indentSize,
+        PARSERLESS_LIST_CONTEXT,
+      ),
     );
     lineFrom += lineText.length + 1;
   }
@@ -30,8 +42,8 @@ export function detectLineGremlins(
   lineFrom: number,
   line: number,
   settings: GremlinsSettings,
-  indentSize = DEFAULT_INDENT_SIZE,
-  isListItem = true,
+  indentSize: number,
+  listContext: MarkdownListContext,
 ): GremlinMatch[] {
   const matches: GremlinMatch[] = [];
   const effectiveIndentSize = normalizeIndentSize(indentSize);
@@ -53,12 +65,15 @@ export function detectLineGremlins(
     }
   }
 
-  if (settings.showListIndentation && isListItem) {
+  if (settings.showListIndentation) {
     const indentation = MARKDOWN_LIST_ITEM.exec(text)?.[1];
-    if (
-      indentation &&
-      indentation.length % effectiveIndentSize !== 0
-    ) {
+    const reason = listIndentationReason(
+      indentation,
+      listContext,
+      effectiveIndentSize,
+    );
+
+    if (indentation && reason) {
       matches.push({
         codePoint: null,
         count: indentation.length,
@@ -66,6 +81,7 @@ export function detectLineGremlins(
         kind: 'list-indentation',
         line,
         name: 'list indentation',
+        reason,
         severity: 'warning',
         to: lineFrom + indentation.length,
         zeroWidth: false,
@@ -108,6 +124,26 @@ export function detectLineGremlins(
   }
 
   return matches.sort((left, right) => left.from - right.from);
+}
+
+function listIndentationReason(
+  indentation: string | undefined,
+  context: MarkdownListContext,
+  indentSize: number,
+) {
+  if (!indentation) {
+    return null;
+  }
+
+  if (context === 'plain-text' || context === 'root-list-item') {
+    return 'orphaned' as const;
+  }
+
+  return context === 'nested-list-item' &&
+    !indentation.includes('\t') &&
+    indentation.length % indentSize !== 0
+    ? ('misaligned' as const)
+    : null;
 }
 
 function isDefinitionEnabled(

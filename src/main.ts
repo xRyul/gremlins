@@ -12,7 +12,7 @@ import { createGremlinsEditorExtension } from './editor-extension.ts';
 import { buildGremlinFixChanges } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
 import { GREMLIN_ICON_ID, GREMLIN_ICON_SVG } from './gremlin-icon.ts';
-import { isMarkdownListItem } from './markdown-context.ts';
+import { getMarkdownListContext } from './markdown-context.ts';
 import { formatGremlinTooltip } from './presentation.ts';
 import {
   DEFAULT_SETTINGS,
@@ -85,20 +85,20 @@ export default class GremlinsPlugin extends Plugin {
     const lineText = editor.getLine(cursor.line);
     const editorState = getEditorState(editor);
     const indentSize = getEditorIndentSize(editorState);
-    const isListItem = editorState
-      ? isMarkdownListItem(
+    const listContext = editorState
+      ? getMarkdownListContext(
           editorState,
           lineText,
           editor.posToOffset({ ch: 0, line: cursor.line }),
         )
-      : false;
+      : 'unknown';
     const matches = detectLineGremlins(
       lineText,
       0,
       cursor.line,
       this.settings,
       indentSize,
-      isListItem,
+      listContext,
     );
     const changes = buildGremlinFixChanges(
       matches,
@@ -132,20 +132,20 @@ export default class GremlinsPlugin extends Plugin {
     const lineText = editor.getLine(cursor.line);
     const editorState = getEditorState(editor);
     const indentSize = getEditorIndentSize(editorState);
-    const isListItem = editorState
-      ? isMarkdownListItem(
+    const listContext = editorState
+      ? getMarkdownListContext(
           editorState,
           lineText,
           editor.posToOffset({ ch: 0, line: cursor.line }),
         )
-      : false;
+      : 'unknown';
     const matches = detectLineGremlins(
       lineText,
       0,
       cursor.line,
       this.settings,
       indentSize,
-      isListItem,
+      listContext,
     );
     const match =
       findGremlinAtPosition(matches, cursor.ch, 1) ??

@@ -18,7 +18,9 @@ export function formatGremlinTooltip(match: GremlinMatch) {
   }
 
   if (match.kind === 'list-indentation') {
-    return `List indentation · ${match.count} leading ${pluralizeSpaces(match.count)} do not match the configured indent width · ${severity}`;
+    return match.reason === 'orphaned'
+      ? `List indentation · Indented list marker has no parent list item · ${severity}`
+      : `List indentation · ${match.count} leading ${pluralizeSpaces(match.count)} do not match the configured indent width · ${severity}`;
   }
 
   const count = match.count > 1 ? `${match.count} ` : '';

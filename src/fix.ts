@@ -10,8 +10,12 @@ export interface GremlinFixChange {
 }
 
 export function isGremlinFixable(match: GremlinMatch) {
+  if (match.kind === 'list-indentation') {
+    return match.reason === 'misaligned';
+  }
+
   return (
-    match.kind !== 'character' ||
+    match.kind === 'mixed-indentation' ||
     GREMLIN_DEFINITIONS_BY_CODE_POINT.has(match.codePoint)
   );
 }
@@ -37,6 +41,13 @@ export function buildGremlinFixChanges(
         insert: definition.replacement.repeat(match.count),
         to: match.to,
       });
+      continue;
+    }
+
+    if (
+      match.kind === 'list-indentation' &&
+      match.reason === 'orphaned'
+    ) {
       continue;
     }
 

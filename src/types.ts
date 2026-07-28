@@ -2,6 +2,13 @@ export type GremlinSeverity = 'info' | 'warning' | 'error';
 
 export type GremlinCategory = 'dangerous' | 'typographic';
 
+export type MarkdownListContext =
+  | 'literal'
+  | 'nested-list-item'
+  | 'plain-text'
+  | 'root-list-item'
+  | 'unknown';
+
 export interface GremlinDefinition {
   category: GremlinCategory;
   codePoint: number;
@@ -42,6 +49,7 @@ export interface ListIndentationGremlinMatch {
   kind: 'list-indentation';
   line: number;
   name: 'list indentation';
+  reason: 'misaligned' | 'orphaned';
   severity: 'warning';
   to: number;
   zeroWidth: false;

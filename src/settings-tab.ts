@@ -55,7 +55,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('List indentation')
       .setDesc(
-        "Highlight space-indented Markdown list items whose indentation is not a multiple of Obsidian's indent visual width.",
+        'Highlight malformed list indentation and indented list markers that have no parent list item.',
       )
       .addToggle((toggle) =>
         toggle
@@ -94,7 +94,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Click gutter icons to fix')
       .setDesc(
-        'Replace every gremlin on a line with normalized text when its bug icon is selected.',
+        'Replace every safely fixable gremlin on a line with normalized text when its bug icon is selected.',
       )
       .addToggle((toggle) =>
         toggle

@@ -184,7 +184,137 @@ describe('detectGremlins', () => {
   });
 
 
-  it('respects the Markdown parser when a list-looking line is not a list', () => {
+  it('flags indented list markers in prose when they have no parent list item', () => {
+    const lines = [
+      'Common issues:',
+      '    - Lack of clarity',
+      '    - Requirements confusion',
+      '    - Over-flexibility',
+      '    - Others',
+    ];
+    let lineFrom = 0;
+
+    const matches = lines.flatMap((text, line) => {
+      const lineMatches = detectLineGremlins(
+        text,
+        lineFrom,
+        line,
+        {
+          ...DEFAULT_SETTINGS,
+          showListIndentation: true,
+        },
+        4,
+        'plain-text',
+      );
+      lineFrom += text.length + 1;
+      return lineMatches;
+    });
+
+    assert.deepEqual(
+      matches.map((match) => ({
+        count: match.count,
+        kind: match.kind,
+        line: match.line,
+        reason:
+          match.kind === 'list-indentation' ? match.reason : null,
+      })),
+      [
+        {
+          count: 4,
+          kind: 'list-indentation',
+          line: 1,
+          reason: 'orphaned',
+        },
+        {
+          count: 4,
+          kind: 'list-indentation',
+          line: 2,
+          reason: 'orphaned',
+        },
+        {
+          count: 4,
+          kind: 'list-indentation',
+          line: 3,
+          reason: 'orphaned',
+        },
+        {
+          count: 4,
+          kind: 'list-indentation',
+          line: 4,
+          reason: 'orphaned',
+        },
+      ],
+    );
+  });
+
+  it('flags tab-indented list markers that have no parent list item', () => {
+    const matches = detectLineGremlins(
+      '\t- Lack of clarity',
+      0,
+      0,
+      {
+        ...DEFAULT_SETTINGS,
+        showListIndentation: true,
+      },
+      4,
+      'plain-text',
+    );
+
+    assert.equal(matches.length, 1);
+    assert.deepEqual(matches[0], {
+      codePoint: null,
+      count: 1,
+      from: 0,
+      kind: 'list-indentation',
+      line: 0,
+      name: 'list indentation',
+      reason: 'orphaned',
+      severity: 'warning',
+      to: 1,
+      zeroWidth: false,
+    });
+  });
+
+  it('flags indentation on a parser-recognized root list item', () => {
+    const matches = detectLineGremlins(
+      '  - root item',
+      0,
+      0,
+      {
+        ...DEFAULT_SETTINGS,
+        showListIndentation: true,
+      },
+      4,
+      'root-list-item',
+    );
+
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0]?.kind, 'list-indentation');
+    assert.equal(
+      matches[0]?.kind === 'list-indentation'
+        ? matches[0].reason
+        : null,
+      'orphaned',
+    );
+  });
+
+  it('preserves an aligned list item that has a parent item', () => {
+    const matches = detectLineGremlins(
+      '    - nested item',
+      0,
+      0,
+      {
+        ...DEFAULT_SETTINGS,
+        showListIndentation: true,
+      },
+      4,
+      'nested-list-item',
+    );
+
+    assert.deepEqual(matches, []);
+  });
+
+  it('excludes parser-recognized literal content', () => {
     const matches = detectLineGremlins(
       '  - literal code',
       0,
@@ -194,7 +324,7 @@ describe('detectGremlins', () => {
         showListIndentation: true,
       },
       4,
-      false,
+      'literal',
     );
 
     assert.deepEqual(matches, []);
