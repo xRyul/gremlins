@@ -87,6 +87,26 @@ describe('presentation helpers', () => {
     );
   });
 
+  it('describes a line that appears to have lost its list marker', () => {
+    assert.equal(
+      formatGremlinTooltip({
+        codePoint: null,
+        count: 4,
+        from: 0,
+        kind: 'missing-list-marker',
+        line: 0,
+        marker: '-',
+        name: 'missing list marker',
+        severity: 'warning',
+        targetIndentation: '            ',
+        to: 4,
+        zeroWidth: false,
+      }),
+      'Missing list marker · Line appears to be a sibling of the following list item · Warning',
+    );
+  });
+
+
   it('selects the highest severity for a gutter marker', () => {
     assert.equal(highestSeverity(['info', 'error', 'warning']), 'error');
     assert.equal(highestSeverity(['info', 'warning']), 'warning');

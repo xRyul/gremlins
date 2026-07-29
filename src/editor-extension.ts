@@ -200,6 +200,12 @@ function buildVisibleGremlins(
           settings,
           view.state.tabSize,
           getMarkdownListContext(view.state, line.text, line.from),
+          line.number > 1
+            ? view.state.doc.line(line.number - 1).text
+            : undefined,
+          line.number < view.state.doc.lines
+            ? view.state.doc.line(line.number + 1).text
+            : undefined,
         );
         matches.push(...lineMatches);
 
@@ -330,6 +336,9 @@ function decorationClasses(match: GremlinMatch) {
     match.zeroWidth ? 'gremlins-zero-width' : 'gremlins-visible-width',
     match.kind === 'mixed-indentation' ? 'gremlins-mixed-indentation' : '',
     match.kind === 'list-indentation' ? 'gremlins-list-indentation' : '',
+    match.kind === 'missing-list-marker'
+      ? 'gremlins-missing-list-marker'
+      : '',
   ]
     .filter(Boolean)
     .join(' ');

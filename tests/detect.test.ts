@@ -361,6 +361,92 @@ describe('detectGremlins', () => {
 
     assert.deepEqual(matches, []);
   });
+
+  it('flags an under-indented line that appears to have lost a list marker', () => {
+    const text = [
+      '    - [ ] Work on project',
+      '        - [ ] Add items:',
+      '    Confirm the archive structure',
+      '            - Determine storage requirements',
+      '            - Define metadata requirements',
+    ].join('\n');
+    const matches = detectGremlins(
+      text,
+      {
+        ...DEFAULT_SETTINGS,
+        showMissingListMarkers: true,
+      },
+      4,
+    );
+
+    assert.deepEqual(
+      matches.map((match) => ({
+        count: match.count,
+        from: match.from,
+        kind: match.kind,
+        line: match.line,
+        marker:
+          match.kind === 'missing-list-marker' ? match.marker : null,
+        targetIndentation:
+          match.kind === 'missing-list-marker'
+            ? match.targetIndentation
+            : null,
+        to: match.to,
+      })),
+      [
+        {
+          count: 4,
+          from: text.indexOf('    Confirm'),
+          kind: 'missing-list-marker',
+          line: 2,
+          marker: '-',
+          targetIndentation: '            ',
+          to: text.indexOf('    Confirm') + 4,
+        },
+      ],
+    );
+  });
+
+  it('uses visual tab widths and copies the following marker style', () => {
+    const text = [
+      '\t- Parent',
+      '\t\t- Previous item',
+      '\tMissing item',
+      '\t\t\t* Following item',
+    ].join('\n');
+    const matches = detectGremlins(
+      text,
+      {
+        ...DEFAULT_SETTINGS,
+        showMissingListMarkers: true,
+      },
+      4,
+    );
+    const match = matches.find(
+      (candidate) => candidate.kind === 'missing-list-marker',
+    );
+
+    assert.equal(match?.kind, 'missing-list-marker');
+    if (match?.kind === 'missing-list-marker') {
+      assert.equal(match.marker, '*');
+      assert.equal(match.targetIndentation, '\t\t\t');
+    }
+  });
+
+
+  it('does not flag an ordinary continuation before a nested list', () => {
+    const matches = detectGremlins(
+      ['- Parent', '    continuation', '    - Child'].join('\n'),
+      {
+        ...DEFAULT_SETTINGS,
+        showMissingListMarkers: true,
+      },
+      4,
+    );
+
+    assert.deepEqual(matches, []);
+  });
+
   it('keeps list-indentation warnings disabled by default', () => {
     const matches = detectGremlins('  - nested', DEFAULT_SETTINGS, 4);
 

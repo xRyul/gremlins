@@ -23,6 +23,10 @@ export function formatGremlinTooltip(match: GremlinMatch) {
       : `List indentation · ${match.count} leading ${pluralizeSpaces(match.count)} do not match the configured indent width · ${severity}`;
   }
 
+  if (match.kind === 'missing-list-marker') {
+    return `Missing list marker · Line appears to be a sibling of the following list item · ${severity}`;
+  }
+
   const count = match.count > 1 ? `${match.count} ` : '';
   const name = `${match.name}${match.count > 1 ? 's' : ''}`;
   return `${count}${name} · Unicode ${formatCodePoint(match.codePoint)} · ${severity}`;

@@ -8,6 +8,9 @@ import type {
 
 const DEFAULT_INDENT_SIZE = 4;
 const MARKDOWN_LIST_ITEM = /^([\t ]+)(?=(?:[-+*]|\d+[.)])(?:[\t ]|$))/;
+const MARKDOWN_LIST_LINE =
+  /^([\t ]*)(?:[-+*]|\d+[.)])(?:[\t ]|$)/;
+const MARKDOWN_UNORDERED_LIST_LINE = /^([\t ]*)([-+*])(?:[\t ]|$)/;
 const PARSERLESS_LIST_CONTEXT: MarkdownListContext = 'nested-list-item';
 
 export function detectGremlins(
@@ -29,6 +32,8 @@ export function detectGremlins(
         settings,
         indentSize,
         PARSERLESS_LIST_CONTEXT,
+        lines[line - 1],
+        lines[line + 1],
       ),
     );
     lineFrom += lineText.length + 1;
@@ -44,6 +49,8 @@ export function detectLineGremlins(
   settings: GremlinsSettings,
   indentSize: number,
   listContext: MarkdownListContext,
+  previousLine?: string,
+  nextLine?: string,
 ): GremlinMatch[] {
   const matches: GremlinMatch[] = [];
   const effectiveIndentSize = normalizeIndentSize(indentSize);
@@ -86,6 +93,20 @@ export function detectLineGremlins(
         to: lineFrom + indentation.length,
         zeroWidth: false,
       });
+    }
+  }
+
+  if (settings.showMissingListMarkers) {
+    const missingListMarker = detectMissingListMarker(
+      previousLine,
+      text,
+      nextLine,
+      lineFrom,
+      line,
+      effectiveIndentSize,
+    );
+    if (missingListMarker) {
+      matches.push(missingListMarker);
     }
   }
 
@@ -150,6 +171,61 @@ function listIndentationReason(
     : null;
 }
 
+function detectMissingListMarker(
+  previousLine: string | undefined,
+  text: string,
+  nextLine: string | undefined,
+  lineFrom: number,
+  line: number,
+  indentSize: number,
+): GremlinMatch | null {
+  const indentation = /^([\t ]+)(?=\S)/.exec(text)?.[1];
+  const previousIndentation = MARKDOWN_LIST_LINE.exec(previousLine ?? '')?.[1];
+  const nextListItem = MARKDOWN_UNORDERED_LIST_LINE.exec(nextLine ?? '');
+
+  if (!indentation || previousIndentation === undefined || !nextListItem) {
+    return null;
+  }
+
+  const content = text.slice(indentation.length);
+  if (MARKDOWN_LIST_LINE.test(content)) {
+    return null;
+  }
+
+  const nextIndentation = nextListItem[1];
+  const marker = nextListItem[2];
+  if (
+    nextIndentation === undefined ||
+    (marker !== '-' && marker !== '+' && marker !== '*')
+  ) {
+    return null;
+  }
+  const currentWidth = indentationWidth(indentation, indentSize);
+  const previousWidth = indentationWidth(previousIndentation, indentSize);
+  const nextWidth = indentationWidth(nextIndentation, indentSize);
+
+  if (
+    currentWidth !== previousWidth - indentSize ||
+    nextWidth !== previousWidth + indentSize
+  ) {
+    return null;
+  }
+
+  return {
+    codePoint: null,
+    count: indentation.length,
+    from: lineFrom,
+    kind: 'missing-list-marker',
+    line,
+    marker,
+    name: 'missing list marker',
+    severity: 'warning',
+    targetIndentation: nextIndentation,
+    to: lineFrom + indentation.length,
+    zeroWidth: false,
+  };
+}
+
 function isDefinitionEnabled(
   definition: GremlinDefinition,
   settings: GremlinsSettings,
@@ -157,6 +233,19 @@ function isDefinitionEnabled(
   return definition.category === 'typographic'
     ? settings.showTypographicCharacters
     : settings.showDangerousCharacters;
+}
+
+function indentationWidth(indentation: string, indentSize: number) {
+  let width = 0;
+
+  for (const character of indentation) {
+    width =
+      character === '\t'
+        ? width + indentSize - (width % indentSize)
+        : width + 1;
+  }
+
+  return width;
 }
 
 function normalizeIndentSize(indentSize: number) {

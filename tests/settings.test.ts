@@ -11,4 +11,8 @@ describe('gremlins settings', () => {
   it('keeps list-indentation warnings disabled by default', () => {
     assert.equal(DEFAULT_SETTINGS.showListIndentation, false);
   });
+
+  it('keeps missing-list-marker warnings disabled by default', () => {
+    assert.equal(DEFAULT_SETTINGS.showMissingListMarkers, false);
+  });
 });

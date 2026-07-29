@@ -97,6 +97,25 @@ describe('isGremlinFixable', () => {
       true,
     );
   });
+
+  it('provides an automatic fix for a missing list marker', () => {
+    assert.equal(
+      isGremlinFixable({
+        codePoint: null,
+        count: 4,
+        from: 0,
+        kind: 'missing-list-marker',
+        line: 0,
+        marker: '-',
+        name: 'missing list marker',
+        severity: 'warning',
+        targetIndentation: '            ',
+        to: 4,
+        zeroWidth: false,
+      }),
+      true,
+    );
+  });
 });
 
 describe('buildOrphanedListBlockFixChanges', () => {
@@ -274,6 +293,51 @@ describe('buildGremlinFixChangesForDocument', () => {
     assert.equal(
       applyChanges(text, changes),
       ['Common issues:', '- Item -', '- Next'].join('\n'),
+    );
+  });
+
+  it('restores the missing marker and indentation in a malformed pasted list', () => {
+    const text = [
+      '    - [ ] Work on project',
+      '        - [ ] Add items:',
+      '    Confirm the archive structure',
+      '            - Determine storage requirements',
+      '            - Define metadata requirements',
+    ].join('\n');
+    const lineText = '    Confirm the archive structure';
+    const lineFrom = text.indexOf(lineText);
+    const missingMarkerMatch: GremlinMatch = {
+      codePoint: null,
+      count: 4,
+      from: lineFrom,
+      kind: 'missing-list-marker',
+      line: 2,
+      marker: '-',
+      name: 'missing list marker',
+      severity: 'warning',
+      targetIndentation: '            ',
+      to: lineFrom + 4,
+      zeroWidth: false,
+    };
+
+    const changes = buildGremlinFixChangesForDocument(
+      [missingMarkerMatch],
+      text,
+      lineText,
+      lineFrom,
+      2,
+      4,
+    );
+
+    assert.equal(
+      applyChanges(text, changes),
+      [
+        '    - [ ] Work on project',
+        '        - [ ] Add items:',
+        '            - Confirm the archive structure',
+        '            - Determine storage requirements',
+        '            - Define metadata requirements',
+      ].join('\n'),
     );
   });
 });

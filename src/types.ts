@@ -56,7 +56,22 @@ export interface ListIndentationGremlinMatch {
   zeroWidth: false;
 }
 
+export interface MissingListMarkerGremlinMatch {
+  codePoint: null;
+  count: number;
+  from: number;
+  kind: 'missing-list-marker';
+  line: number;
+  marker: '-' | '+' | '*';
+  name: 'missing list marker';
+  severity: 'warning';
+  targetIndentation: string;
+  to: number;
+  zeroWidth: false;
+}
+
 export type GremlinMatch =
   | CharacterGremlinMatch
   | ListIndentationGremlinMatch
+  | MissingListMarkerGremlinMatch
   | MixedIndentationGremlinMatch;

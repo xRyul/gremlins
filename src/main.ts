@@ -41,7 +41,7 @@ export default class GremlinsPlugin extends Plugin {
     });
     this.addCommand({
       id: 'fix-current-line',
-      name: 'Fix current line or orphaned list block',
+      name: 'Fix current line or list block',
       editorCheckCallback: (checking, editor) =>
         this.fixGremlinsOnCurrentLine(editor, checking),
     });
@@ -83,6 +83,10 @@ export default class GremlinsPlugin extends Plugin {
 
     const cursor = editor.getCursor();
     const lineText = editor.getLine(cursor.line);
+    const [previousLine, nextLine] = getSurroundingLines(
+      editor,
+      cursor.line,
+    );
     const lineFrom = editor.posToOffset({ ch: 0, line: cursor.line });
     const editorState = getEditorState(editor);
     const indentSize = getEditorIndentSize(editorState);
@@ -96,11 +100,16 @@ export default class GremlinsPlugin extends Plugin {
       this.settings,
       indentSize,
       listContext,
+      previousLine,
+      nextLine,
     );
     const hasOrphanedList = matches.some(
       (match) =>
         match.kind === 'list-indentation' &&
         match.reason === 'orphaned',
+    );
+    const hasMissingListMarker = matches.some(
+      (match) => match.kind === 'missing-list-marker',
     );
     const changes = buildGremlinFixChangesForDocument(
       matches,
@@ -126,10 +135,14 @@ export default class GremlinsPlugin extends Plugin {
         'gremlins',
       );
       editor.focus();
+      let fixedTarget = 'gremlins';
+      if (hasOrphanedList) {
+        fixedTarget = 'orphaned list block';
+      } else if (hasMissingListMarker) {
+        fixedTarget = 'missing list marker';
+      }
       new Notice(
-        hasOrphanedList
-          ? `Fixed orphaned list block at line ${cursor.line + 1}.`
-          : `Fixed gremlins on line ${cursor.line + 1}.`,
+        `Fixed ${fixedTarget} at line ${cursor.line + 1}.`,
       );
     }
     return true;
@@ -138,6 +151,10 @@ export default class GremlinsPlugin extends Plugin {
   private inspectGremlinAtCursor(editor: Editor, checking: boolean) {
     const cursor = editor.getCursor();
     const lineText = editor.getLine(cursor.line);
+    const [previousLine, nextLine] = getSurroundingLines(
+      editor,
+      cursor.line,
+    );
     const editorState = getEditorState(editor);
     const indentSize = getEditorIndentSize(editorState);
     const listContext = editorState
@@ -154,6 +171,8 @@ export default class GremlinsPlugin extends Plugin {
       this.settings,
       indentSize,
       listContext,
+      previousLine,
+      nextLine,
     );
     const match =
       findGremlinAtPosition(matches, cursor.ch, 1) ??
@@ -167,6 +186,15 @@ export default class GremlinsPlugin extends Plugin {
     }
     return true;
   }
+}
+
+function getSurroundingLines(editor: Editor, line: number) {
+  return [
+    line > 0 ? editor.getLine(line - 1) : undefined,
+    line + 1 < editor.lineCount()
+      ? editor.getLine(line + 1)
+      : undefined,
+  ] as const;
 }
 
 function getEditorState(editor: Editor) {

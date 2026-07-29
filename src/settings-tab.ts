@@ -66,6 +66,19 @@ export class GremlinsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName('Missing list markers')
+      .setDesc(
+        'Highlight under-indented text that appears to have lost an unordered-list marker before deeper sibling items.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.controller.settings.showMissingListMarkers)
+          .onChange((value) =>
+            this.updateSettings({ showMissingListMarkers: value }),
+          ),
+      );
+
+    new Setting(containerEl)
       .setName('Typographic punctuation')
       .setDesc(
         'Highlight curly quotation marks, en dashes, and em dashes. Disabled by default because these are common in prose.',
@@ -94,7 +107,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Click gutter icons to fix')
       .setDesc(
-        'Fix highlighted gremlins. Orphaned list markers dedent their contiguous block together.',
+        'Fix highlighted gremlins. Orphaned list markers dedent their contiguous block; missing markers are restored and aligned.',
       )
       .addToggle((toggle) =>
         toggle

@@ -39,7 +39,8 @@
 }
 
 .gremlins-mixed-indentation,
-.gremlins-list-indentation {
+.gremlins-list-indentation,
+.gremlins-missing-list-marker {
   background-image: repeating-linear-gradient(
     135deg,
     transparent 0,

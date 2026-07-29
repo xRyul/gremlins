@@ -17,7 +17,10 @@ export interface GremlinFixChange {
 }
 
 export function isGremlinFixable(match: GremlinMatch) {
-  if (match.kind === 'list-indentation') {
+  if (
+    match.kind === 'list-indentation' ||
+    match.kind === 'missing-list-marker'
+  ) {
     return true;
   }
 
@@ -46,6 +49,15 @@ export function buildGremlinFixChanges(
       changes.push({
         from: match.from,
         insert: definition.replacement.repeat(match.count),
+        to: match.to,
+      });
+      continue;
+    }
+
+    if (match.kind === 'missing-list-marker') {
+      changes.push({
+        from: match.from,
+        insert: `${match.targetIndentation}${match.marker} `,
         to: match.to,
       });
       continue;
@@ -88,9 +100,18 @@ export function buildGremlinFixChangesForDocument(
       match.kind === 'list-indentation' &&
       match.reason === 'orphaned',
   );
+  const missingListMarkerMatch = matches.find(
+    (match) => match.kind === 'missing-list-marker',
+  );
   const directMatches = orphanedListMatch
     ? matches.filter((match) => match.kind === 'character')
-    : matches;
+    : missingListMarkerMatch
+      ? matches.filter(
+          (match) =>
+            match.kind === 'character' ||
+            match.kind === 'missing-list-marker',
+        )
+      : matches;
   const changes = buildGremlinFixChanges(
     directMatches,
     lineText,
