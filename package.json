@@ -1,12 +1,13 @@
 {
   "name": "obsidian-gremlins",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Reveal invisible Unicode characters and suspicious indentation in Obsidian notes.",
   "main": "main.js",
   "type": "module",
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "test": "tsx --test tests/*.test.ts",
+    "test:obsidian": "npm run test && npm run typecheck && bash tests/e2e/editor-tooltip.sh",
     "typecheck": "tsc --noEmit --skipLibCheck",
     "build": "npm run test && npm run typecheck && node esbuild.config.mjs production",
     "lint": "eslint ."

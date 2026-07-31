@@ -61,7 +61,6 @@ class GremlinGutterMarker extends GutterMarker {
       ? 'Fix highlighted gremlins'
       : 'Line contains one or more gremlins';
     marker.setAttribute('aria-label', label);
-    marker.title = label;
     setIcon(marker, GREMLIN_ICON_ID);
     return marker;
   }
@@ -215,7 +214,6 @@ function buildVisibleGremlins(
             match.to,
             Decoration.mark({
               attributes: {
-                'aria-label': formatGremlinTooltip(match),
                 'data-gremlin': match.kind,
               },
               class: decorationClasses(match),
