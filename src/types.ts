@@ -95,6 +95,41 @@ export interface ListMarkerSpacingGremlinMatch {
   zeroWidth: false;
 }
 
+export interface ListItemPunctuationGremlinMatch {
+  codePoint: null;
+  count: number;
+  expected: string;
+  from: number;
+  kind: 'list-item-punctuation';
+  line: number;
+  name: 'list item punctuation';
+  replacement: string;
+  replacementFrom: number;
+  replacementTo: number;
+  severity: 'warning';
+  to: number;
+  zeroWidth: false;
+}
+
+export interface ListItemLineEndingGremlinMatch {
+  codePoint: null;
+  count: number;
+  expected:
+    | 'blank-line'
+    | 'no-trailing-whitespace'
+    | 'two-spaces';
+  from: number;
+  kind: 'list-item-line-ending';
+  line: number;
+  name: 'list item line ending';
+  replacement: string;
+  replacementFrom: number;
+  replacementTo: number;
+  severity: 'warning';
+  to: number;
+  zeroWidth: false;
+}
+
 export interface MissingListMarkerGremlinMatch {
   codePoint: null;
   count: number;
@@ -114,6 +149,8 @@ export type GremlinMatch =
   | CharacterGremlinMatch
   | DuplicateListMarkerGremlinMatch
   | ListIndentationGremlinMatch
+  | ListItemLineEndingGremlinMatch
+  | ListItemPunctuationGremlinMatch
   | ListMarkerSpacingGremlinMatch
   | MissingListMarkerGremlinMatch
   | MixedIndentationGremlinMatch;

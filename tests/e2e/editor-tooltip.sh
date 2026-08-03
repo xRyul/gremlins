@@ -209,4 +209,52 @@ assert_equal 0 "$ambiguous_count" \
 assert_equal true "$has_list_delimiter" \
   'Gutter fix did not add the missing list-marker delimiter'
 
-printf 'PASS: Obsidian tooltips and ambiguous empty list marker fixes work.\n'
+"${OBSIDIAN[@]}" eval \
+  "code=app.plugins.plugins.gremlins.updateSettings({...app.plugins.plugins.gremlins.settings, showAmbiguousEmptyListMarkers: false, listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'})" \
+  >/dev/null
+"${OBSIDIAN[@]}" eval \
+  "code=app.workspace.getMostRecentLeaf().view.editor.setValue('- First.  \\n- Second')" \
+  >/dev/null
+
+punctuation_selector='.workspace-leaf.mod-active [data-gremlin="list-item-punctuation"]'
+line_ending_selector='.workspace-leaf.mod-active [data-gremlin="list-item-line-ending"]'
+for _ in {1..50}; do
+  punctuation_count=$(dom_total "$punctuation_selector")
+  line_ending_count=$(dom_total "$line_ending_selector")
+  if [[ $punctuation_count == 1 && $line_ending_count == 1 ]]; then
+    break
+  fi
+  sleep 0.1
+done
+assert_equal 1 "$punctuation_count" \
+  'Missing list-item punctuation was not highlighted'
+assert_equal 1 "$line_ending_count" \
+  'Missing list-item hard break was not highlighted'
+
+fixed_list_ending=$(obsidian_eval "(() => {
+  const editor = app.workspace.getMostRecentLeaf().view.editor;
+  editor.setCursor({ line: 1, ch: 0 });
+  app.commands.executeCommandById('gremlins:fix-current-line');
+  return true;
+})()")
+assert_equal true "$fixed_list_ending" \
+  'List-item ending command did not run'
+
+for _ in {1..50}; do
+  punctuation_count=$(dom_total "$punctuation_selector")
+  line_ending_count=$(dom_total "$line_ending_selector")
+  fixed_list_text=$(obsidian_eval \
+    "app.workspace.getMostRecentLeaf().view.editor.getLine(1) === '- Second.  '")
+  if [[ $punctuation_count == 0 && $line_ending_count == 0 && $fixed_list_text == true ]]; then
+    break
+  fi
+  sleep 0.1
+done
+assert_equal 0 "$punctuation_count" \
+  'List-item punctuation remained highlighted after the fix'
+assert_equal 0 "$line_ending_count" \
+  'List-item hard break remained highlighted after the fix'
+assert_equal true "$fixed_list_text" \
+  'List-item ending fix did not add a period and two trailing spaces'
+
+printf 'PASS: Obsidian tooltips and list-formatting fixes work.\n'

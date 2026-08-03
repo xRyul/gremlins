@@ -23,6 +23,7 @@ import {
 } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
 import {
+  detectEditorListItemEndingGremlins,
   getMarkdownListContext,
   markdownSyntaxTreeChanged,
 } from './markdown-context.ts';
@@ -185,6 +186,15 @@ function buildVisibleGremlins(
   const markerBuilder = new RangeSetBuilder<GutterMarker>();
   const matches: GremlinMatch[] = [];
   const visitedLines = new Set<number>();
+  const listItemEndingMatchesByLine = new Map<number, GremlinMatch[]>();
+  for (const match of detectEditorListItemEndingGremlins(
+    view.state,
+    settings,
+  )) {
+    const lineMatches = listItemEndingMatchesByLine.get(match.line) ?? [];
+    lineMatches.push(match);
+    listItemEndingMatchesByLine.set(match.line, lineMatches);
+  }
 
   for (const visibleRange of view.visibleRanges) {
     let line = view.state.doc.lineAt(visibleRange.from);
@@ -192,19 +202,24 @@ function buildVisibleGremlins(
     while (line.from <= visibleRange.to) {
       if (!visitedLines.has(line.number)) {
         visitedLines.add(line.number);
-        const lineMatches = detectLineGremlins(
-          line.text,
-          line.from,
-          line.number - 1,
-          settings,
-          view.state.tabSize,
-          getMarkdownListContext(view.state, line.text, line.from),
-          line.number > 1
-            ? view.state.doc.line(line.number - 1).text
-            : undefined,
-          line.number < view.state.doc.lines
-            ? view.state.doc.line(line.number + 1).text
-            : undefined,
+        const lineMatches = [
+          ...detectLineGremlins(
+            line.text,
+            line.from,
+            line.number - 1,
+            settings,
+            view.state.tabSize,
+            getMarkdownListContext(view.state, line.text, line.from),
+            line.number > 1
+              ? view.state.doc.line(line.number - 1).text
+              : undefined,
+            line.number < view.state.doc.lines
+              ? view.state.doc.line(line.number + 1).text
+              : undefined,
+          ),
+          ...(listItemEndingMatchesByLine.get(line.number - 1) ?? []),
+        ].sort((left, right) =>
+          left.from - right.from || left.to - right.to,
         );
         matches.push(...lineMatches);
 
@@ -342,6 +357,12 @@ function decorationClasses(match: GremlinMatch) {
     match.kind === 'list-indentation' ? 'gremlins-list-indentation' : '',
     match.kind === 'list-marker-spacing'
       ? 'gremlins-list-marker-spacing'
+      : '',
+    match.kind === 'list-item-line-ending'
+      ? 'gremlins-list-item-line-ending'
+      : '',
+    match.kind === 'list-item-punctuation'
+      ? 'gremlins-list-item-punctuation'
       : '',
     match.kind === 'missing-list-marker'
       ? 'gremlins-missing-list-marker'

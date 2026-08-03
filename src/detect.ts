@@ -1,4 +1,5 @@
 import { GREMLIN_DEFINITIONS_BY_CODE_POINT } from './characters.ts';
+import { detectListItemEndingGremlins } from './list-item-endings.ts';
 import type { GremlinsSettings } from './settings-model.ts';
 import type {
   GremlinDefinition,
@@ -51,7 +52,10 @@ export function detectGremlins(
     lineFrom += lineText.length + 1;
   }
 
-  return matches;
+  matches.push(
+    ...detectListItemEndingGremlins(text, settings, { indentSize }),
+  );
+  return matches.sort((left, right) => left.from - right.from);
 }
 
 export function detectLineGremlins(

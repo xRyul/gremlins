@@ -1,6 +1,10 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
 
-import type { GremlinsSettings } from './settings-model.ts';
+import type {
+  GremlinsSettings,
+  ListItemLineEndingPolicy,
+  ListItemPunctuationPolicy,
+} from './settings-model.ts';
 
 export interface GremlinsSettingsController {
   settings: GremlinsSettings;
@@ -122,6 +126,52 @@ export class GremlinsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName('List item punctuation')
+      .setDesc(
+        'Enforce terminal punctuation within each list. Automatic matching infers the dominant style independently for each list.',
+      )
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOptions({
+            disabled: 'Disabled',
+            consistent: 'Match each list automatically',
+            none: 'No terminal punctuation',
+            period: 'Period',
+            semicolon: 'Semicolon',
+            'semicolon-final-period': 'Semicolons, then a final period',
+          })
+          .setValue(this.controller.settings.listItemPunctuationPolicy)
+          .onChange((value) =>
+            this.updateSettings({
+              listItemPunctuationPolicy:
+                value as ListItemPunctuationPolicy,
+            }),
+          ),
+      );
+
+    new Setting(containerEl)
+      .setName('List item line endings')
+      .setDesc(
+        'Enforce trailing whitespace or blank-line separation at the end of list items.',
+      )
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOptions({
+            disabled: 'Disabled',
+            'no-trailing-whitespace': 'No trailing whitespace',
+            'two-spaces': 'Two spaces (Markdown hard break)',
+            'blank-line': 'Blank line between items',
+          })
+          .setValue(this.controller.settings.listItemLineEndingPolicy)
+          .onChange((value) =>
+            this.updateSettings({
+              listItemLineEndingPolicy:
+                value as ListItemLineEndingPolicy,
+            }),
+          ),
+      );
+
+    new Setting(containerEl)
       .setName('Typographic punctuation')
       .setDesc(
         'Highlight curly quotation marks, en dashes, and em dashes. Disabled by default because these are common in prose.',
@@ -150,7 +200,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Click gutter icons to fix')
       .setDesc(
-        'Fix highlighted gremlins. List fixes can normalize indentation or marker spacing, remove duplicate markers, restore missing markers, or delimit ambiguous empty markers.',
+        'Fix highlighted gremlins. List fixes can normalize indentation, markers, punctuation, and line endings.',
       )
       .addToggle((toggle) =>
         toggle

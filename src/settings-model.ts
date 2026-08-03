@@ -1,5 +1,21 @@
+export type ListItemPunctuationPolicy =
+  | 'disabled'
+  | 'consistent'
+  | 'none'
+  | 'period'
+  | 'semicolon'
+  | 'semicolon-final-period';
+
+export type ListItemLineEndingPolicy =
+  | 'disabled'
+  | 'no-trailing-whitespace'
+  | 'two-spaces'
+  | 'blank-line';
+
 export interface GremlinsSettings {
   enableClickToFix: boolean;
+  listItemLineEndingPolicy: ListItemLineEndingPolicy;
+  listItemPunctuationPolicy: ListItemPunctuationPolicy;
   showAmbiguousEmptyListMarkers: boolean;
   showDangerousCharacters: boolean;
   showDuplicateListMarkers: boolean;
@@ -13,6 +29,8 @@ export interface GremlinsSettings {
 
 export const DEFAULT_SETTINGS: GremlinsSettings = {
   enableClickToFix: false,
+  listItemLineEndingPolicy: 'disabled',
+  listItemPunctuationPolicy: 'disabled',
   showAmbiguousEmptyListMarkers: false,
   showDangerousCharacters: true,
   showDuplicateListMarkers: false,

@@ -56,6 +56,20 @@ describe('classifyMarkdownListSyntax', () => {
     );
   });
 
+  it('keeps inline code on a list continuation associated with the list', () => {
+    assert.equal(
+      classifyMarkdownListSyntax(
+        [
+          'inline-code',
+          'HyperMD-list-line_HyperMD-list-line-1',
+          'Document',
+        ],
+        true,
+      ),
+      'list-continuation',
+    );
+  });
+
   it('keeps list-shaped content inside literal regions excluded', () => {
     for (const nodeNames of [
       [

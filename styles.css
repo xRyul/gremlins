@@ -41,6 +41,8 @@
 .gremlins-mixed-indentation,
 .gremlins-list-indentation,
 .gremlins-list-marker-spacing,
+.gremlins-list-item-line-ending,
+.gremlins-list-item-punctuation,
 .gremlins-ambiguous-empty-list-marker,
 .gremlins-duplicate-list-marker,
 .gremlins-missing-list-marker {

@@ -21,6 +21,8 @@ export function isGremlinFixable(match: GremlinMatch) {
     match.kind === 'ambiguous-empty-list-marker' ||
     match.kind === 'duplicate-list-marker' ||
     match.kind === 'list-indentation' ||
+    match.kind === 'list-item-line-ending' ||
+    match.kind === 'list-item-punctuation' ||
     match.kind === 'list-marker-spacing' ||
     match.kind === 'missing-list-marker'
   ) {
@@ -41,9 +43,23 @@ export function buildGremlinFixChanges(
 ): GremlinFixChange[] {
   const changes: GremlinFixChange[] = [];
   const effectiveIndentSize = normalizeIndentSize(indentSize);
+  const lineEndingMatches = matches.filter(
+    (match) => match.kind === 'list-item-line-ending',
+  );
 
   for (const match of matches) {
     if (match.kind === 'character') {
+      if (
+        lineEndingMatches.some(
+          (ending) =>
+            ending.replacementFrom < ending.replacementTo &&
+            ending.replacementFrom <= match.from &&
+            ending.replacementTo >= match.to,
+        )
+      ) {
+        continue;
+      }
+
       const definition = GREMLIN_DEFINITIONS_BY_CODE_POINT.get(match.codePoint);
       if (!definition) {
         continue;
@@ -94,6 +110,18 @@ export function buildGremlinFixChanges(
     }
 
     if (
+      match.kind === 'list-item-line-ending' ||
+      match.kind === 'list-item-punctuation'
+    ) {
+      changes.push({
+        from: match.replacementFrom,
+        insert: match.replacement,
+        to: match.replacementTo,
+      });
+      continue;
+    }
+
+    if (
       match.kind === 'list-indentation' &&
       match.reason === 'orphaned'
     ) {
@@ -114,7 +142,7 @@ export function buildGremlinFixChanges(
     });
   }
 
-  return changes;
+  return mergeConcurrentInsertions(changes);
 }
 
 export function buildGremlinFixChangesForDocument(
@@ -139,6 +167,8 @@ export function buildGremlinFixChangesForDocument(
           match.kind === 'ambiguous-empty-list-marker' ||
           match.kind === 'character' ||
           match.kind === 'duplicate-list-marker' ||
+          match.kind === 'list-item-line-ending' ||
+          match.kind === 'list-item-punctuation' ||
           match.kind === 'list-marker-spacing',
       )
     : missingListMarkerMatch
@@ -301,6 +331,31 @@ function indentationForWidth(
     '\t'.repeat(Math.floor(width / indentSize)) +
     ' '.repeat(width % indentSize)
   );
+}
+
+function mergeConcurrentInsertions(
+  changes: readonly GremlinFixChange[],
+) {
+  const merged: GremlinFixChange[] = [];
+
+  for (const change of changes) {
+    const existing =
+      change.from === change.to
+        ? merged.find(
+            (candidate) =>
+              candidate.from === change.from &&
+              candidate.to === change.to,
+          )
+        : undefined;
+
+    if (existing) {
+      existing.insert += change.insert;
+    } else {
+      merged.push({ ...change });
+    }
+  }
+
+  return merged;
 }
 
 function normalizeIndentSize(indentSize: number) {

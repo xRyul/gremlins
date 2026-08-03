@@ -8,11 +8,15 @@ import {
 } from 'obsidian';
 
 import { detectLineGremlins } from './detect.ts';
+import { detectListItemEndingGremlins } from './list-item-endings.ts';
 import { createGremlinsEditorExtension } from './editor-extension.ts';
 import { buildGremlinFixChangesForDocument } from './fix.ts';
 import { findGremlinAtPosition } from './match-position.ts';
 import { GREMLIN_ICON_ID, GREMLIN_ICON_SVG } from './gremlin-icon.ts';
-import { getMarkdownListContext } from './markdown-context.ts';
+import {
+  detectEditorListItemEndingGremlins,
+  getMarkdownListContext,
+} from './markdown-context.ts';
 import { formatGremlinTooltip } from './presentation.ts';
 import {
   DEFAULT_SETTINGS,
@@ -93,16 +97,25 @@ export default class GremlinsPlugin extends Plugin {
     const listContext = editorState
       ? getMarkdownListContext(editorState, lineText, lineFrom)
       : 'unknown';
-    const matches = detectLineGremlins(
-      lineText,
-      lineFrom,
-      cursor.line,
-      this.settings,
-      indentSize,
-      listContext,
-      previousLine,
-      nextLine,
-    );
+    const documentText = editor.getValue();
+    const matches = [
+      ...detectLineGremlins(
+        lineText,
+        lineFrom,
+        cursor.line,
+        this.settings,
+        indentSize,
+        listContext,
+        previousLine,
+        nextLine,
+      ),
+      ...detectDocumentListItemEndings(
+        editorState,
+        documentText,
+        this.settings,
+        indentSize,
+      ).filter((match) => match.line === cursor.line),
+    ].sort((left, right) => left.from - right.from || left.to - right.to);
     const hasAmbiguousEmptyListMarker = matches.some(
       (match) => match.kind === 'ambiguous-empty-list-marker',
     );
@@ -116,7 +129,7 @@ export default class GremlinsPlugin extends Plugin {
     );
     const changes = buildGremlinFixChangesForDocument(
       matches,
-      editor.getValue(),
+      documentText,
       lineText,
       lineFrom,
       cursor.line,
@@ -160,28 +173,35 @@ export default class GremlinsPlugin extends Plugin {
       editor,
       cursor.line,
     );
+    const lineFrom = editor.posToOffset({ ch: 0, line: cursor.line });
     const editorState = getEditorState(editor);
     const indentSize = getEditorIndentSize(editorState);
+    const documentText = editor.getValue();
     const listContext = editorState
-      ? getMarkdownListContext(
-          editorState,
-          lineText,
-          editor.posToOffset({ ch: 0, line: cursor.line }),
-        )
+      ? getMarkdownListContext(editorState, lineText, lineFrom)
       : 'unknown';
-    const matches = detectLineGremlins(
-      lineText,
-      0,
-      cursor.line,
-      this.settings,
-      indentSize,
-      listContext,
-      previousLine,
-      nextLine,
-    );
+    const matches = [
+      ...detectLineGremlins(
+        lineText,
+        lineFrom,
+        cursor.line,
+        this.settings,
+        indentSize,
+        listContext,
+        previousLine,
+        nextLine,
+      ),
+      ...detectDocumentListItemEndings(
+        editorState,
+        documentText,
+        this.settings,
+        indentSize,
+      ).filter((match) => match.line === cursor.line),
+    ].sort((left, right) => left.from - right.from || left.to - right.to);
+    const cursorOffset = editor.posToOffset(cursor);
     const match =
-      findGremlinAtPosition(matches, cursor.ch, 1) ??
-      findGremlinAtPosition(matches, cursor.ch, -1);
+      findGremlinAtPosition(matches, cursorOffset, 1) ??
+      findGremlinAtPosition(matches, cursorOffset, -1);
 
     if (!match) {
       return false;
@@ -191,6 +211,17 @@ export default class GremlinsPlugin extends Plugin {
     }
     return true;
   }
+}
+
+function detectDocumentListItemEndings(
+  state: EditorState | null,
+  documentText: string,
+  settings: GremlinsSettings,
+  indentSize: number,
+) {
+  return state
+    ? detectEditorListItemEndingGremlins(state, settings)
+    : detectListItemEndingGremlins(documentText, settings, { indentSize });
 }
 
 function getSurroundingLines(editor: Editor, line: number) {

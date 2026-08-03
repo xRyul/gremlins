@@ -27,4 +27,12 @@ describe('gremlins settings', () => {
   it('keeps missing-list-marker warnings disabled by default', () => {
     assert.equal(DEFAULT_SETTINGS.showMissingListMarkers, false);
   });
+
+  it('keeps list-item punctuation enforcement disabled by default', () => {
+    assert.equal(DEFAULT_SETTINGS.listItemPunctuationPolicy, 'disabled');
+  });
+
+  it('keeps list-item line-ending enforcement disabled by default', () => {
+    assert.equal(DEFAULT_SETTINGS.listItemLineEndingPolicy, 'disabled');
+  });
 });

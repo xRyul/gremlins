@@ -157,6 +157,47 @@ describe('presentation helpers', () => {
     );
   });
 
+  it('describes the expected list item punctuation', () => {
+    assert.equal(
+      formatGremlinTooltip({
+        codePoint: null,
+        count: 1,
+        expected: ';',
+        from: 6,
+        kind: 'list-item-punctuation',
+        line: 0,
+        name: 'list item punctuation',
+        replacement: ';',
+        replacementFrom: 7,
+        replacementTo: 7,
+        severity: 'warning',
+        to: 7,
+        zeroWidth: false,
+      }),
+      'List item punctuation · Expected a semicolon (;) at the end of this item · Warning',
+    );
+  });
+
+  it('describes the expected list item line ending', () => {
+    assert.equal(
+      formatGremlinTooltip({
+        codePoint: null,
+        count: 1,
+        expected: 'two-spaces',
+        from: 6,
+        kind: 'list-item-line-ending',
+        line: 0,
+        name: 'list item line ending',
+        replacement: '  ',
+        replacementFrom: 7,
+        replacementTo: 7,
+        severity: 'warning',
+        to: 7,
+        zeroWidth: false,
+      }),
+      'List item line ending · Expected exactly two trailing spaces (Markdown hard break) · Warning',
+    );
+  });
 
   it('selects the highest severity for a gutter marker', () => {
     assert.equal(highestSeverity(['info', 'error', 'warning']), 'error');

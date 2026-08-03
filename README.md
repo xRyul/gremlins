@@ -14,11 +14,11 @@ If you ever paste something that has many unicodes, Gremlins flag them. To repla
 
 ## Features
 
-- Flags invisible or unusual Unicode characters, mixed indentation, malformed list indentation, ambiguous or missing list markers, duplicate unordered markers, and extra list-marker spacing when enabled, plus optional typographic punctuation (curly quotation marks, en dashes, and em dashes). See details below.
+- Flags invisible or unusual Unicode characters, mixed indentation, malformed list structure and spacing, inconsistent list-item punctuation and line endings, plus optional typographic punctuation (curly quotation marks, en dashes, and em dashes). See details below.
 - Shows an icon beside every visible line containing a gremlin (optionally, you can click the icon to fix the character immediatly)
 - Works in Source mode and Live Preview.
 
-## The plugin checks eight groups of rules.
+## The plugin checks ten groups of rules.
 
 ### 1. Invisible or potentially dangerous Unicode - enabled by default
 
@@ -87,7 +87,21 @@ This conservative rule detects a pasted-list pattern where a prose line is exact
 
 When fixed, the line is aligned with the following list item and receives the same unordered marker (`-`, `+`, or `*`). Because this changes Markdown structure based on a heuristic, the rule is opt-in and never fixes text automatically.
 
-### 8. Typographic punctuation - disabled by default
+### 8. List item punctuation - disabled by default
+
+This rule can require no terminal punctuation, periods, semicolons, or semicolons followed by a period on the final item. It can also infer the dominant style independently for each contiguous list and nested level; when styles are tied, the first item decides. The conventional semicolon/final-period pattern is recognized automatically.
+
+Ordered, unordered, task, nested, multiline, and blockquoted list items are supported. For multiline items, the final content line is checked. Fenced code, frontmatter, and other parser-recognized literal Markdown are ignored.
+
+When fixed, Gremlins inserts, replaces, or removes the terminal punctuation selected for that list.
+
+### 9. List item line endings - disabled by default
+
+This rule offers three policies: remove trailing whitespace, require exactly two ordinary trailing spaces for a Markdown hard break, or require a blank line between sibling list items. Blank-line fixes are placed after a nested subtree so the parent list structure is preserved.
+
+When fixed, Gremlins normalizes only the selected line-ending behavior. The final list item is not given an extra blank separator.
+
+### 10. Typographic punctuation - disabled by default
 
 | Unicode | Character | Optional replacement |
 |---|---|---|
@@ -102,7 +116,7 @@ When fixed, the line is aligned with the following list item and receives the sa
 The plugin does **not automatically replace anything**:
 
 - **Click gutter icons to fix** is disabled by default.
-- Without it, Gremlins only highlights and explains characters.
+- Without it, Gremlins only highlights and explains characters or list-formatting inconsistencies.
 
 
 ## Inspiration
