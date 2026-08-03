@@ -167,6 +167,57 @@ describe('list item punctuation', () => {
     );
   });
 
+  it('does not flag question or exclamation endings during automatic matching', () => {
+    const text = [
+      '1. **Report/version history?**',
+      '    - "Preserve fixed report snapshots chronologically"',
+      '    - Allow previous report versions to be retrieved!',
+      '    - Customers may receive access to appropriate historical reports?',
+      '2. **Audit trail**',
+    ].join('\n');
+
+    assert.deepEqual(endings(text, 'consistent'), []);
+  });
+
+  it('preserves meaningful sentence endings for every punctuation policy', () => {
+    const text = [
+      '- Is this ready?',
+      '- This is urgent!',
+      '- Is this surprising?!',
+      '- "Is this quoted?"',
+      '- Waiting...',
+      '- Waiting…',
+      '- مكتمل؟',
+      '- 完了。',
+      '- Really\\?',
+    ].join('\n');
+
+    for (const policy of [
+      'consistent',
+      'none',
+      'period',
+      'semicolon',
+      'semicolon-final-period',
+    ] as const) {
+      assert.deepEqual(endings(text, policy), []);
+    }
+  });
+
+  it('exempts display-math endings without letting them drive inference', () => {
+    const multiline = [
+      '- First.',
+      '- Formula',
+      '  $$',
+      '  x = 1',
+      '  $$',
+      '- Third.',
+    ].join('\n');
+
+    assert.deepEqual(endings(multiline, 'consistent'), []);
+    assert.deepEqual(endings('- $$', 'period'), []);
+    assert.deepEqual(endings('- $$x = 1$$', 'period'), []);
+  });
+
   it('treats nested lists as independent lists', () => {
     const text = [
       '- Parent.',
@@ -336,11 +387,11 @@ describe('list item punctuation', () => {
   });
 
   it('normalizes a complete terminal punctuation run in one fix', () => {
-    const text = '- Is this done?!';
+    const text = '- This is done.;';
     const matches = endings(text, 'none');
 
     assert.equal(matches[0]?.count, 2);
-    assert.equal(fixDocument(text, matches), '- Is this done');
+    assert.equal(fixDocument(text, matches), '- This is done');
   });
 
   it('keeps different Markdown list marker styles independent', () => {
@@ -531,8 +582,8 @@ describe('list item punctuation', () => {
     );
   });
 
-  it('removes the escape together with escaped terminal punctuation', () => {
-    const text = '- Really\\?';
+  it('removes an escape together with replaceable terminal punctuation', () => {
+    const text = '- Really\\;';
 
     assert.equal(fixDocument(text, endings(text, 'none')), '- Really');
     assert.equal(fixDocument(text, endings(text, 'period')), '- Really.');
@@ -620,6 +671,23 @@ describe('list item line endings', () => {
     assert.equal(
       fixDocument(text, matches),
       ['- None  ', '- One  ', '- Two  ', '- Three  '].join('\n'),
+    );
+  });
+
+  it('skips hard breaks before nested lists and after display math', () => {
+    const text = [
+      '1. **Report/version history**?',
+      '    - "Preserve fixed report snapshots chronologically"  ',
+      '    - Allow previous report versions to be retrieved!  ',
+      '    - Customers may receive access to appropriate historical reports?  ',
+      '2. **Audit trail**  ',
+      '    - df?  ',
+      '    - $$Primarily supports traceability and internal audit$$',
+    ].join('\n');
+
+    assert.deepEqual(
+      detectListItemEndingGremlins(text, settings('none', 'two-spaces')),
+      [],
     );
   });
 

@@ -128,7 +128,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('List item punctuation')
       .setDesc(
-        'Enforce terminal punctuation within each list. Automatic matching infers the dominant style independently for each list.',
+        'Enforce style punctuation within each list while preserving questions, exclamations, ellipses, and display math. Automatic matching infers each list independently.',
       )
       .addDropdown((dropdown) =>
         dropdown
@@ -152,7 +152,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('List item line endings')
       .setDesc(
-        'Enforce trailing whitespace or blank-line separation at the end of list items.',
+        'Enforce trailing whitespace or blank-line separation. Hard breaks skip nested-list parents, block ids, and display math.',
       )
       .addDropdown((dropdown) =>
         dropdown

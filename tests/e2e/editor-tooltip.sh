@@ -257,4 +257,28 @@ assert_equal 0 "$line_ending_count" \
 assert_equal true "$fixed_list_text" \
   'List-item ending fix did not add a period and two trailing spaces'
 
+"${OBSIDIAN[@]}" eval \
+  "code=app.plugins.plugins.gremlins.updateSettings({...app.plugins.plugins.gremlins.settings, listItemPunctuationPolicy: 'none', listItemLineEndingPolicy: 'two-spaces'})" \
+  >/dev/null
+"${OBSIDIAN[@]}" eval \
+  "code=app.workspace.getMostRecentLeaf().view.editor.setValue(['1. **Report/version history**?', '    - Previous versions remain available!  ', '    - Are historical reports available?  ', '2. **Audit trail**  ', '    - \$\$Supports traceability and internal audit\$\$'].join('\\n'))" \
+  >/dev/null
+
+for _ in {1..50}; do
+  punctuation_count=$(dom_total "$punctuation_selector")
+  line_ending_count=$(dom_total "$line_ending_selector")
+  semantic_endings_ready=$(obsidian_eval \
+    "(() => { const editor = app.workspace.getMostRecentLeaf().view.editor; return editor.lineCount() === 5 && editor.getLine(4) === '    - \$\$Supports traceability and internal audit\$\$'; })()")
+  if [[ $semantic_endings_ready == true && $punctuation_count == 0 && $line_ending_count == 0 ]]; then
+    break
+  fi
+  sleep 0.1
+done
+assert_equal true "$semantic_endings_ready" \
+  'Semantic list-ending test content was not rendered'
+assert_equal 0 "$punctuation_count" \
+  'Meaningful sentence punctuation was incorrectly highlighted'
+assert_equal 0 "$line_ending_count" \
+  'Nested-list or display-math ending was incorrectly highlighted'
+
 printf 'PASS: Obsidian tooltips and list-formatting fixes work.\n'

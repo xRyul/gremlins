@@ -21,8 +21,10 @@ export type {
   ListItemEndingLineContext,
 } from './list-item-structure.ts';
 
-const TERMINAL_PUNCTUATION_RUN = /[.!?;,:]+$/;
+const TERMINAL_PUNCTUATION_RUN = /[\p{Sentence_Terminal}…;,:]+$/u;
 const TRAILING_FORMATTING_MARKERS = /[*_~]+$/;
+const TRAILING_PRESENTATIONAL_MARKERS = /[*_~"'’”»›]+$/;
+const SENTENCE_TERMINAL = /\p{Sentence_Terminal}/u;
 
 interface TerminalPunctuation {
   from: number | null;
@@ -78,10 +80,10 @@ function detectPunctuationGremlins(
       (item): item is ListItem & { endpoint: ItemEndpoint } =>
         item.endpoint !== null,
     );
-    // Structural colons do not influence inference, but retain their formal-list position.
+    // Semantic endings do not influence inference, but retain their formal-list position.
     const policyItems =
       policy === 'consistent'
-        ? items.filter((item) => !isNestedListIntroducer(item))
+        ? items.filter((item) => !isPunctuationExempt(item))
         : items;
     if (
       policyItems.length === 0 ||
@@ -97,7 +99,7 @@ function detectPunctuationGremlins(
       if (
         !item ||
         expectedPunctuation === undefined ||
-        isNestedListIntroducer(item)
+        isPunctuationExempt(item)
       ) {
         continue;
       }
@@ -112,11 +114,39 @@ function detectPunctuationGremlins(
   return matches;
 }
 
-function isNestedListIntroducer(
+function isPunctuationExempt(
   item: ListItem & { endpoint: ItemEndpoint },
 ) {
+  const punctuation = terminalPunctuation(item.endpoint).value;
   return (
-    item.hasNestedList && terminalPunctuation(item.endpoint).value === ':'
+    (item.hasNestedList && punctuation === ':') ||
+    isMeaningfulSentenceEnding(punctuation) ||
+    endsWithDisplayMath(item.endpoint)
+  );
+}
+
+function isMeaningfulSentenceEnding(punctuation: string) {
+  if (/^\.{2,}$/.test(punctuation) || punctuation.includes('…')) {
+    return true;
+  }
+
+  return [...punctuation].some(
+    (character) => character !== '.' && SENTENCE_TERMINAL.test(character),
+  );
+}
+
+function endsWithDisplayMath(endpoint: ItemEndpoint) {
+  const content = endpoint.line.text.slice(
+    endpoint.contentStart,
+    endpoint.effectiveEnd,
+  );
+  const formatting = TRAILING_FORMATTING_MARKERS.exec(content)?.[0] ?? '';
+  const mathEnd = endpoint.effectiveEnd - formatting.length;
+  const mathFrom = mathEnd - 2;
+  return (
+    mathFrom >= endpoint.contentStart &&
+    endpoint.line.text.slice(mathFrom, mathEnd) === '$$' &&
+    !isEscaped(endpoint.line.text, mathFrom)
   );
 }
 
@@ -226,6 +256,13 @@ function detectLineEndingGremlins(
   for (const group of groups) {
     for (const item of group.items) {
       if (!item.lineEndingEndpoint) {
+        continue;
+      }
+
+      if (
+        policy === 'two-spaces' &&
+        (item.hasNestedList || endsWithDisplayMath(item.lineEndingEndpoint))
+      ) {
         continue;
       }
 
@@ -452,7 +489,7 @@ function punctuationInRange(
   end: number,
 ): TerminalPunctuation {
   const content = line.text.slice(start, end);
-  const formatting = TRAILING_FORMATTING_MARKERS.exec(content)?.[0] ?? '';
+  const formatting = TRAILING_PRESENTATIONAL_MARKERS.exec(content)?.[0] ?? '';
   const punctuationEnd = end - formatting.length;
   const punctuation = TERMINAL_PUNCTUATION_RUN.exec(
     line.text.slice(start, punctuationEnd),
