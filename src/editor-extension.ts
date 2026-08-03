@@ -335,8 +335,14 @@ function decorationClasses(match: GremlinMatch) {
     match.kind === 'ambiguous-empty-list-marker'
       ? 'gremlins-ambiguous-empty-list-marker'
       : '',
+    match.kind === 'duplicate-list-marker'
+      ? 'gremlins-duplicate-list-marker'
+      : '',
     match.kind === 'mixed-indentation' ? 'gremlins-mixed-indentation' : '',
     match.kind === 'list-indentation' ? 'gremlins-list-indentation' : '',
+    match.kind === 'list-marker-spacing'
+      ? 'gremlins-list-marker-spacing'
+      : '',
     match.kind === 'missing-list-marker'
       ? 'gremlins-missing-list-marker'
       : '',

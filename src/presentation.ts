@@ -31,6 +31,14 @@ export function formatGremlinTooltip(match: GremlinMatch) {
     return `Ambiguous empty list marker · Missing space may cause Obsidian to parse the preceding line as a heading · ${severity}`;
   }
 
+  if (match.kind === 'duplicate-list-marker') {
+    return `Duplicate list marker · Consecutive unordered markers may create an unintended nested list · ${severity}`;
+  }
+
+  if (match.kind === 'list-marker-spacing') {
+    return `List marker spacing · Marker is not followed by exactly one ordinary space · ${severity}`;
+  }
+
   const count = match.count > 1 ? `${match.count} ` : '';
   const name = `${match.name}${match.count > 1 ? 's' : ''}`;
   return `${count}${name} · Unicode ${formatCodePoint(match.codePoint)} · ${severity}`;

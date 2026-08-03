@@ -46,6 +46,18 @@ export interface AmbiguousEmptyListMarkerGremlinMatch {
   zeroWidth: false;
 }
 
+export interface DuplicateListMarkerGremlinMatch {
+  codePoint: null;
+  count: 1;
+  from: number;
+  kind: 'duplicate-list-marker';
+  line: number;
+  name: 'duplicate list marker';
+  severity: 'warning';
+  to: number;
+  zeroWidth: false;
+}
+
 export interface MixedIndentationGremlinMatch {
   codePoint: null;
   count: number;
@@ -71,6 +83,18 @@ export interface ListIndentationGremlinMatch {
   zeroWidth: false;
 }
 
+export interface ListMarkerSpacingGremlinMatch {
+  codePoint: null;
+  count: number;
+  from: number;
+  kind: 'list-marker-spacing';
+  line: number;
+  name: 'list marker spacing';
+  severity: 'warning';
+  to: number;
+  zeroWidth: false;
+}
+
 export interface MissingListMarkerGremlinMatch {
   codePoint: null;
   count: number;
@@ -88,6 +112,8 @@ export interface MissingListMarkerGremlinMatch {
 export type GremlinMatch =
   | AmbiguousEmptyListMarkerGremlinMatch
   | CharacterGremlinMatch
+  | DuplicateListMarkerGremlinMatch
   | ListIndentationGremlinMatch
+  | ListMarkerSpacingGremlinMatch
   | MissingListMarkerGremlinMatch
   | MixedIndentationGremlinMatch;

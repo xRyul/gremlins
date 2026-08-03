@@ -123,6 +123,40 @@ describe('presentation helpers', () => {
     );
   });
 
+  it('describes a duplicate list marker', () => {
+    assert.equal(
+      formatGremlinTooltip({
+        codePoint: null,
+        count: 1,
+        from: 0,
+        kind: 'duplicate-list-marker',
+        line: 0,
+        name: 'duplicate list marker',
+        severity: 'warning',
+        to: 2,
+        zeroWidth: false,
+      }),
+      'Duplicate list marker · Consecutive unordered markers may create an unintended nested list · Warning',
+    );
+  });
+
+  it('describes malformed list marker spacing', () => {
+    assert.equal(
+      formatGremlinTooltip({
+        codePoint: null,
+        count: 2,
+        from: 1,
+        kind: 'list-marker-spacing',
+        line: 0,
+        name: 'list marker spacing',
+        severity: 'warning',
+        to: 3,
+        zeroWidth: false,
+      }),
+      'List marker spacing · Marker is not followed by exactly one ordinary space · Warning',
+    );
+  });
+
 
   it('selects the highest severity for a gutter marker', () => {
     assert.equal(highestSeverity(['info', 'error', 'warning']), 'error');

@@ -40,7 +40,9 @@
 
 .gremlins-mixed-indentation,
 .gremlins-list-indentation,
+.gremlins-list-marker-spacing,
 .gremlins-ambiguous-empty-list-marker,
+.gremlins-duplicate-list-marker,
 .gremlins-missing-list-marker {
   background-image: repeating-linear-gradient(
     135deg,

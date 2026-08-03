@@ -14,11 +14,11 @@ If you ever paste something that has many unicodes, Gremlins flag them. To repla
 
 ## Features
 
-- Flags invisible or unusual Unicode characters, mixed indentation, malformed list indentation, ambiguous empty list markers, and likely missing list markers when enabled, plus optional typographic punctuation (curly quotation marks, en dashes, and em dashes). See details below.
+- Flags invisible or unusual Unicode characters, mixed indentation, malformed list indentation, ambiguous or missing list markers, duplicate unordered markers, and extra list-marker spacing when enabled, plus optional typographic punctuation (curly quotation marks, en dashes, and em dashes). See details below.
 - Shows an icon beside every visible line containing a gremlin (optionally, you can click the icon to fix the character immediatly)
 - Works in Source mode and Live Preview.
 
-## The plugin checks six groups of rules.
+## The plugin checks eight groups of rules.
 
 ### 1. Invisible or potentially dangerous Unicode - enabled by default
 
@@ -63,19 +63,31 @@ When fixed, an orphaned list marker dedents its entire contiguous indented block
 
 Fixes retain relative visual indentation and prefer each line's existing tab- or space-led style.
 
-### 4. Ambiguous empty list markers - disabled by default
+### 4. Duplicate list markers - disabled by default
+
+This rule detects consecutive unordered list markers before item content on one source line, such as `- - Detect double bullets`. Markdown renders these as nested lists, which can hide an accidental duplicate marker. Blockquotes and nested lists are supported; literal Markdown regions, thematic breaks, and marker-only lines are ignored.
+
+When fixed, Gremlins removes the first marker and its following whitespace, producing `- Detect double bullets`. Because compact nested-list syntax can be intentional, this rule is opt-in.
+
+### 5. List marker spacing - disabled by default
+
+This rule detects unordered and ordered list markers followed by anything other than one ordinary space, such as `-  Detect space`, `1.  Detect space`, or a tab-delimited item. It also checks each marker in compact nested-list syntax. Literal Markdown regions, thematic breaks, and potential Setext underlines are ignored.
+
+When fixed, Gremlins replaces the marker delimiter with one ordinary space. Multiple spaces are valid Markdown and can sometimes be intentional, so this rule is opt-in.
+
+### 6. Ambiguous empty list markers - disabled by default
 
 This conservative rule detects a lone hyphen with no following space when surrounding list structure strongly suggests that it is intended as an empty list item. The following line must be a dash list item at the same indentation, while the preceding line must be either its parent list item or a same-level dash item. The same pattern is supported inside blockquotes and callouts. Ordinary Setext headings and literal Markdown regions are ignored.
 
 Without a trailing space, Obsidian may treat the hyphen as a Setext level-two heading underline and parse the preceding list text as a heading. When fixed, Gremlins inserts one ordinary space after the hyphen so Obsidian parses it as an explicit empty list item. Because an intentional heading inside a list is still technically possible, this rule is opt-in.
 
-### 5. Missing list markers - disabled by default
+### 7. Missing list markers - disabled by default
 
 This conservative rule detects a pasted-list pattern where a prose line is exactly one indent level shallower than the preceding list item while the next line is an unordered list item exactly one level deeper than that preceding item. This indicates that the prose line may have lost its list marker and indentation. Ordinary continuation text indented beneath its parent is ignored.
 
 When fixed, the line is aligned with the following list item and receives the same unordered marker (`-`, `+`, or `*`). Because this changes Markdown structure based on a heuristic, the rule is opt-in and never fixes text automatically.
 
-### 6. Typographic punctuation - disabled by default
+### 8. Typographic punctuation - disabled by default
 
 | Unicode | Character | Optional replacement |
 |---|---|---|

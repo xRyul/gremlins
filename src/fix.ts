@@ -19,7 +19,9 @@ export interface GremlinFixChange {
 export function isGremlinFixable(match: GremlinMatch) {
   if (
     match.kind === 'ambiguous-empty-list-marker' ||
+    match.kind === 'duplicate-list-marker' ||
     match.kind === 'list-indentation' ||
+    match.kind === 'list-marker-spacing' ||
     match.kind === 'missing-list-marker'
   ) {
     return true;
@@ -73,6 +75,24 @@ export function buildGremlinFixChanges(
       continue;
     }
 
+    if (match.kind === 'duplicate-list-marker') {
+      changes.push({
+        from: match.from,
+        insert: '',
+        to: match.to,
+      });
+      continue;
+    }
+
+    if (match.kind === 'list-marker-spacing') {
+      changes.push({
+        from: match.from,
+        insert: ' ',
+        to: match.to,
+      });
+      continue;
+    }
+
     if (
       match.kind === 'list-indentation' &&
       match.reason === 'orphaned'
@@ -117,7 +137,9 @@ export function buildGremlinFixChangesForDocument(
     ? matches.filter(
         (match) =>
           match.kind === 'ambiguous-empty-list-marker' ||
-          match.kind === 'character',
+          match.kind === 'character' ||
+          match.kind === 'duplicate-list-marker' ||
+          match.kind === 'list-marker-spacing',
       )
     : missingListMarkerMatch
       ? matches.filter(

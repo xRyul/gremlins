@@ -11,6 +11,13 @@ const MARKDOWN_LIST_ITEM = /^([\t ]+)(?=(?:[-+*]|\d+[.)])(?:[\t ]|$))/;
 const MARKDOWN_LIST_LINE =
   /^([\t ]*)(?:[-+*]|\d+[.)])(?:[\t ]|$)/;
 const MARKDOWN_UNORDERED_LIST_LINE = /^([\t ]*)([-+*])(?:[\t ]|$)/;
+const DUPLICATE_UNORDERED_LIST_MARKERS =
+  /^([\t ]*)[-+*]([\t ]+)(?=[-+*][\t ]+\S)/;
+const MARKDOWN_LIST_MARKER_WITH_DELIMITER =
+  /^([\t ]*)([-+*]|[0-9]{1,9}[.)])([\t ]+)(?=\S|$)/;
+const MARKDOWN_THEMATIC_BREAK =
+  /^ {0,3}([-*_])(?:[\t ]*\1){2,}[\t ]*$/;
+const POTENTIAL_SETEXT_UNDERLINE = /^[\t ]*-[\t ]*$/;
 const AMBIGUOUS_EMPTY_LIST_MARKER = /^([\t ]*)-$/;
 const MARKDOWN_LIST_LINE_WITH_CONTENT =
   /^([\t ]*)([-+*]|\d+[.)])([\t ]{1,4})\S/;
@@ -101,6 +108,26 @@ export function detectLineGremlins(
     }
   }
 
+  const duplicateListMarker = settings.showDuplicateListMarkers
+    ? detectDuplicateListMarker(text, lineFrom, line, listContext)
+    : null;
+  if (duplicateListMarker) {
+    matches.push(duplicateListMarker);
+  }
+
+  if (settings.showListMarkerSpacing) {
+    const listMarkerSpacingMatches = detectListMarkerSpacing(
+      text,
+      lineFrom,
+      line,
+      listContext,
+    ).filter(
+      (match) =>
+        !duplicateListMarker || match.from >= duplicateListMarker.to,
+    );
+    matches.push(...listMarkerSpacingMatches);
+  }
+
   if (settings.showAmbiguousEmptyListMarkers) {
     const ambiguousEmptyListMarker = detectAmbiguousEmptyListMarker(
       previousLine,
@@ -165,6 +192,115 @@ export function detectLineGremlins(
   }
 
   return matches.sort((left, right) => left.from - right.from);
+}
+
+function detectDuplicateListMarker(
+  text: string,
+  lineFrom: number,
+  line: number,
+  listContext: MarkdownListContext,
+): GremlinMatch | null {
+  const content = listMarkerRuleContent(text, listContext);
+  if (!content) {
+    return null;
+  }
+  const duplicateMarkers = DUPLICATE_UNORDERED_LIST_MARKERS.exec(
+    content.text,
+  );
+  if (!duplicateMarkers) {
+    return null;
+  }
+
+  const indentation = duplicateMarkers[1] ?? '';
+  const delimiter = duplicateMarkers[2] ?? '';
+  const markerFrom =
+    lineFrom + content.prefix.length + indentation.length;
+
+  return {
+    codePoint: null,
+    count: 1,
+    from: markerFrom,
+    kind: 'duplicate-list-marker',
+    line,
+    name: 'duplicate list marker',
+    severity: 'warning',
+    to: markerFrom + 1 + delimiter.length,
+    zeroWidth: false,
+  };
+}
+
+function detectListMarkerSpacing(
+  text: string,
+  lineFrom: number,
+  line: number,
+  listContext: MarkdownListContext,
+): GremlinMatch[] {
+  const content = listMarkerRuleContent(text, listContext);
+  if (!content) {
+    return [];
+  }
+
+  const matches: GremlinMatch[] = [];
+  const contentFrom = lineFrom + content.prefix.length;
+  let markerOffset = 0;
+
+  while (markerOffset <= content.text.length) {
+    const listMarker = MARKDOWN_LIST_MARKER_WITH_DELIMITER.exec(
+      content.text.slice(markerOffset),
+    );
+    if (!listMarker) {
+      break;
+    }
+
+    const indentation = listMarker[1] ?? '';
+    const marker = listMarker[2] ?? '';
+    const delimiter = listMarker[3] ?? '';
+    const spacingFrom =
+      contentFrom + markerOffset + indentation.length + marker.length;
+
+    if (delimiter !== ' ') {
+      matches.push({
+        codePoint: null,
+        count: delimiter.length,
+        from: spacingFrom,
+        kind: 'list-marker-spacing',
+        line,
+        name: 'list marker spacing',
+        severity: 'warning',
+        to: spacingFrom + delimiter.length,
+        zeroWidth: false,
+      });
+    }
+
+    markerOffset +=
+      indentation.length + marker.length + delimiter.length;
+  }
+
+  return matches;
+}
+
+function listMarkerRuleContent(
+  text: string,
+  listContext: MarkdownListContext,
+) {
+  if (!isListMarkerRuleContext(listContext)) {
+    return null;
+  }
+
+  const content = markdownLineContent(text);
+  return MARKDOWN_THEMATIC_BREAK.test(content.text) ||
+    POTENTIAL_SETEXT_UNDERLINE.test(content.text)
+    ? null
+    : content;
+}
+
+function isListMarkerRuleContext(context: MarkdownListContext) {
+  return (
+    context === 'blockquote' ||
+    context === 'nested-list-item' ||
+    context === 'plain-text' ||
+    context === 'root-list-item'
+  );
 }
 
 function listIndentationReason(

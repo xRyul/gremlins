@@ -66,6 +66,32 @@ export class GremlinsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName('Duplicate list markers')
+      .setDesc(
+        'Highlight consecutive unordered list markers such as “- - item”.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.controller.settings.showDuplicateListMarkers)
+          .onChange((value) =>
+            this.updateSettings({ showDuplicateListMarkers: value }),
+          ),
+      );
+
+    new Setting(containerEl)
+      .setName('List marker spacing')
+      .setDesc(
+        'Highlight unordered or ordered list markers followed by extra spaces or a tab.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.controller.settings.showListMarkerSpacing)
+          .onChange((value) =>
+            this.updateSettings({ showListMarkerSpacing: value }),
+          ),
+      );
+
+    new Setting(containerEl)
       .setName('Ambiguous empty list markers')
       .setDesc(
         'Highlight lone hyphens that appear to be empty list items but may make Obsidian parse the preceding line as a heading.',
@@ -124,7 +150,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Click gutter icons to fix')
       .setDesc(
-        'Fix highlighted gremlins. List fixes can normalize indentation, restore markers, or delimit ambiguous empty markers.',
+        'Fix highlighted gremlins. List fixes can normalize indentation or marker spacing, remove duplicate markers, restore missing markers, or delimit ambiguous empty markers.',
       )
       .addToggle((toggle) =>
         toggle
