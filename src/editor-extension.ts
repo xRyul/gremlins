@@ -332,6 +332,9 @@ function decorationClasses(match: GremlinMatch) {
     'gremlins-character',
     `gremlins-severity-${match.severity}`,
     match.zeroWidth ? 'gremlins-zero-width' : 'gremlins-visible-width',
+    match.kind === 'ambiguous-empty-list-marker'
+      ? 'gremlins-ambiguous-empty-list-marker'
+      : '',
     match.kind === 'mixed-indentation' ? 'gremlins-mixed-indentation' : '',
     match.kind === 'list-indentation' ? 'gremlins-list-indentation' : '',
     match.kind === 'missing-list-marker'

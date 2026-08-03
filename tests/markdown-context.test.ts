@@ -46,6 +46,43 @@ describe('classifyMarkdownListSyntax', () => {
     );
   });
 
+  it('identifies list continuation text without a parsed marker', () => {
+    assert.equal(
+      classifyMarkdownListSyntax(
+        ['HyperMD-list-line_HyperMD-list-line-1', 'Document'],
+        true,
+      ),
+      'list-continuation',
+    );
+  });
+
+  it('keeps list-shaped content inside literal regions excluded', () => {
+    for (const nodeNames of [
+      [
+        'comment_list-1',
+        'HyperMD-list-line_HyperMD-list-line-1',
+        'Document',
+      ],
+      [
+        'hmd-codeblock_list-1',
+        'HyperMD-list-line_HyperMD-list-line-1',
+        'Document',
+      ],
+    ]) {
+      assert.equal(classifyMarkdownListSyntax(nodeNames, true), 'literal');
+    }
+  });
+
+  it('identifies blockquote content outside literal regions', () => {
+    assert.equal(
+      classifyMarkdownListSyntax(
+        ['quote_quote-1', 'HyperMD-quote_HyperMD-quote-1', 'Document'],
+        true,
+      ),
+      'blockquote',
+    );
+  });
+
   it('treats parsed plain text as a possible orphaned marker', () => {
     assert.equal(
       classifyMarkdownListSyntax(['Document'], true),

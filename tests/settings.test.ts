@@ -8,6 +8,10 @@ describe('gremlins settings', () => {
     assert.equal(DEFAULT_SETTINGS.enableClickToFix, false);
   });
 
+  it('keeps ambiguous-empty-list-marker warnings disabled by default', () => {
+    assert.equal(DEFAULT_SETTINGS.showAmbiguousEmptyListMarkers, false);
+  });
+
   it('keeps list-indentation warnings disabled by default', () => {
     assert.equal(DEFAULT_SETTINGS.showListIndentation, false);
   });

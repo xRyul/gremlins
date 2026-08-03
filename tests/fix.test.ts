@@ -61,6 +61,20 @@ function mixedIndentationMatch(count: number): GremlinMatch {
   };
 }
 
+function ambiguousEmptyListMarkerMatch(): GremlinMatch {
+  return {
+    codePoint: null,
+    count: 1,
+    from: 24,
+    kind: 'ambiguous-empty-list-marker',
+    line: 1,
+    name: 'ambiguous empty list marker',
+    severity: 'warning',
+    to: 25,
+    zeroWidth: false,
+  };
+}
+
 function applyChanges(
   text: string,
   changes: readonly { from: number; insert: string; to: number }[],
@@ -115,6 +129,10 @@ describe('isGremlinFixable', () => {
       }),
       true,
     );
+  });
+
+  it('provides an automatic fix for an ambiguous empty list marker', () => {
+    assert.equal(isGremlinFixable(ambiguousEmptyListMarkerMatch()), true);
   });
 });
 
@@ -296,6 +314,42 @@ describe('buildGremlinFixChangesForDocument', () => {
     );
   });
 
+  it('combines an orphaned block fix with an empty-marker fix', () => {
+    const text = ['    -', '    - Following'].join('\n');
+    const orphanedListMatch: GremlinMatch = {
+      codePoint: null,
+      count: 4,
+      from: 0,
+      kind: 'list-indentation',
+      line: 0,
+      name: 'list indentation',
+      reason: 'orphaned',
+      severity: 'warning',
+      to: 4,
+      zeroWidth: false,
+    };
+    const emptyMarkerMatch: GremlinMatch = {
+      ...ambiguousEmptyListMarkerMatch(),
+      from: 4,
+      line: 0,
+      to: 5,
+    };
+
+    const changes = buildGremlinFixChangesForDocument(
+      [orphanedListMatch, emptyMarkerMatch],
+      text,
+      '    -',
+      0,
+      0,
+      4,
+    );
+
+    assert.equal(
+      applyChanges(text, changes),
+      ['- ', '- Following'].join('\n'),
+    );
+  });
+
   it('restores the missing marker and indentation in a malformed pasted list', () => {
     const text = [
       '    - [ ] Work on project',
@@ -343,6 +397,17 @@ describe('buildGremlinFixChangesForDocument', () => {
 });
 
 describe('buildGremlinFixChanges', () => {
+  it('adds the missing delimiter to an ambiguous empty list marker', () => {
+    assert.deepEqual(
+      buildGremlinFixChanges(
+        [ambiguousEmptyListMarkerMatch()],
+        '    -',
+        20,
+      ),
+      [{ from: 25, insert: ' ', to: 25 }],
+    );
+  });
+
   it('replaces Unicode spacing characters with ordinary spaces', () => {
     const line = `a\u00a0\u00a0b`;
 

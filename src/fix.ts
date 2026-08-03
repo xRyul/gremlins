@@ -18,6 +18,7 @@ export interface GremlinFixChange {
 
 export function isGremlinFixable(match: GremlinMatch) {
   if (
+    match.kind === 'ambiguous-empty-list-marker' ||
     match.kind === 'list-indentation' ||
     match.kind === 'missing-list-marker'
   ) {
@@ -58,6 +59,15 @@ export function buildGremlinFixChanges(
       changes.push({
         from: match.from,
         insert: `${match.targetIndentation}${match.marker} `,
+        to: match.to,
+      });
+      continue;
+    }
+
+    if (match.kind === 'ambiguous-empty-list-marker') {
+      changes.push({
+        from: match.to,
+        insert: ' ',
         to: match.to,
       });
       continue;
@@ -104,7 +114,11 @@ export function buildGremlinFixChangesForDocument(
     (match) => match.kind === 'missing-list-marker',
   );
   const directMatches = orphanedListMatch
-    ? matches.filter((match) => match.kind === 'character')
+    ? matches.filter(
+        (match) =>
+          match.kind === 'ambiguous-empty-list-marker' ||
+          match.kind === 'character',
+      )
     : missingListMarkerMatch
       ? matches.filter(
           (match) =>

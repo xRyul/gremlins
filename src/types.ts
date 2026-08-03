@@ -3,9 +3,12 @@ export type GremlinSeverity = 'info' | 'warning' | 'error';
 export type GremlinCategory = 'dangerous' | 'typographic';
 
 export type MarkdownListContext =
+  | 'blockquote'
   | 'indented-code'
+  | 'list-continuation'
   | 'literal'
   | 'nested-list-item'
+  | 'parserless'
   | 'plain-text'
   | 'root-list-item'
   | 'unknown';
@@ -29,6 +32,18 @@ export interface CharacterGremlinMatch {
   severity: GremlinSeverity;
   to: number;
   zeroWidth: boolean;
+}
+
+export interface AmbiguousEmptyListMarkerGremlinMatch {
+  codePoint: null;
+  count: 1;
+  from: number;
+  kind: 'ambiguous-empty-list-marker';
+  line: number;
+  name: 'ambiguous empty list marker';
+  severity: 'warning';
+  to: number;
+  zeroWidth: false;
 }
 
 export interface MixedIndentationGremlinMatch {
@@ -71,6 +86,7 @@ export interface MissingListMarkerGremlinMatch {
 }
 
 export type GremlinMatch =
+  | AmbiguousEmptyListMarkerGremlinMatch
   | CharacterGremlinMatch
   | ListIndentationGremlinMatch
   | MissingListMarkerGremlinMatch

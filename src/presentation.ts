@@ -27,6 +27,10 @@ export function formatGremlinTooltip(match: GremlinMatch) {
     return `Missing list marker · Line appears to be a sibling of the following list item · ${severity}`;
   }
 
+  if (match.kind === 'ambiguous-empty-list-marker') {
+    return `Ambiguous empty list marker · Missing space may cause Obsidian to parse the preceding line as a heading · ${severity}`;
+  }
+
   const count = match.count > 1 ? `${match.count} ` : '';
   const name = `${match.name}${match.count > 1 ? 's' : ''}`;
   return `${count}${name} · Unicode ${formatCodePoint(match.codePoint)} · ${severity}`;

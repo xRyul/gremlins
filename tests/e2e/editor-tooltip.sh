@@ -129,9 +129,18 @@ assert_equal "$TEST_PATH" "$active_path" 'Temporary test note did not become act
 assert_equal 1 "$character_count" 'Gremlin character was not rendered'
 
 character_selector='.workspace-leaf.mod-active .gremlins-character'
-hover "$character_selector"
-code_mirror_tooltips=$(dom_total \
-  '.cm-tooltip-hover:has(.gremlins-tooltip)')
+code_mirror_tooltips=0
+for attempt in {1..3}; do
+  hover "$character_selector"
+  for poll in {1..20}; do
+    code_mirror_tooltips=$(dom_total \
+      '.cm-tooltip-hover:has(.gremlins-tooltip)')
+    if [[ $code_mirror_tooltips == 1 ]]; then
+      break 2
+    fi
+    sleep 0.1
+  done
+done
 obsidian_tooltips=$(dom_total 'body > .tooltip')
 character_has_aria_label=$(obsidian_eval \
   "document.querySelector('$character_selector')?.hasAttribute('aria-label') ?? false")
@@ -157,4 +166,47 @@ assert_equal 1 "$obsidian_tooltips" \
 assert_equal false "$gutter_has_title" \
   'Gutter icon should not also trigger a browser-native tooltip'
 
-printf 'PASS: Obsidian renders one tooltip per Gremlins hover target.\n'
+"${OBSIDIAN[@]}" eval \
+  "code=app.plugins.plugins.gremlins.updateSettings({...app.plugins.plugins.gremlins.settings, showAmbiguousEmptyListMarkers: true, enableClickToFix: true})" \
+  >/dev/null
+"${OBSIDIAN[@]}" eval \
+  "code=app.workspace.getMostRecentLeaf().view.editor.setValue('2. **Audit trail**\\n    -\\n    - Child')" \
+  >/dev/null
+
+ambiguous_selector='.workspace-leaf.mod-active [data-gremlin="ambiguous-empty-list-marker"]'
+for _ in {1..50}; do
+  ambiguous_count=$(dom_total "$ambiguous_selector")
+  if [[ $ambiguous_count == 1 ]]; then
+    break
+  fi
+  sleep 0.1
+done
+assert_equal 1 "$ambiguous_count" \
+  'Ambiguous empty list marker was not highlighted'
+
+clicked=$(obsidian_eval "(() => {
+  const marker = document.querySelector(
+    '.workspace-leaf.mod-active .gremlins-gutter-marker-interactive',
+  );
+  if (!marker) return false;
+  marker.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
+  return true;
+})()")
+assert_equal true "$clicked" \
+  'Ambiguous empty list marker did not provide an interactive gutter fix'
+
+for _ in {1..50}; do
+  ambiguous_count=$(dom_total "$ambiguous_selector")
+  if [[ $ambiguous_count == 0 ]]; then
+    break
+  fi
+  sleep 0.1
+done
+has_list_delimiter=$(obsidian_eval \
+  "app.workspace.getMostRecentLeaf().view.editor.getLine(1) === '    - '")
+assert_equal 0 "$ambiguous_count" \
+  'Ambiguous empty list marker remained highlighted after the fix'
+assert_equal true "$has_list_delimiter" \
+  'Gutter fix did not add the missing list-marker delimiter'
+
+printf 'PASS: Obsidian tooltips and ambiguous empty list marker fixes work.\n'

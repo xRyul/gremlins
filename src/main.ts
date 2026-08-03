@@ -103,6 +103,9 @@ export default class GremlinsPlugin extends Plugin {
       previousLine,
       nextLine,
     );
+    const hasAmbiguousEmptyListMarker = matches.some(
+      (match) => match.kind === 'ambiguous-empty-list-marker',
+    );
     const hasOrphanedList = matches.some(
       (match) =>
         match.kind === 'list-indentation' &&
@@ -140,6 +143,8 @@ export default class GremlinsPlugin extends Plugin {
         fixedTarget = 'orphaned list block';
       } else if (hasMissingListMarker) {
         fixedTarget = 'missing list marker';
+      } else if (hasAmbiguousEmptyListMarker) {
+        fixedTarget = 'ambiguous empty list marker';
       }
       new Notice(
         `Fixed ${fixedTarget} at line ${cursor.line + 1}.`,

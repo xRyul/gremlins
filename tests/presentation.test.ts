@@ -106,6 +106,23 @@ describe('presentation helpers', () => {
     );
   });
 
+  it('describes an ambiguous empty list marker', () => {
+    assert.equal(
+      formatGremlinTooltip({
+        codePoint: null,
+        count: 1,
+        from: 4,
+        kind: 'ambiguous-empty-list-marker',
+        line: 1,
+        name: 'ambiguous empty list marker',
+        severity: 'warning',
+        to: 5,
+        zeroWidth: false,
+      }),
+      'Ambiguous empty list marker · Missing space may cause Obsidian to parse the preceding line as a heading · Warning',
+    );
+  });
+
 
   it('selects the highest severity for a gutter marker', () => {
     assert.equal(highestSeverity(['info', 'error', 'warning']), 'error');

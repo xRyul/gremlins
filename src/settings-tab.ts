@@ -66,6 +66,23 @@ export class GremlinsSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName('Ambiguous empty list markers')
+      .setDesc(
+        'Highlight lone hyphens that appear to be empty list items but may make Obsidian parse the preceding line as a heading.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(
+            this.controller.settings.showAmbiguousEmptyListMarkers,
+          )
+          .onChange((value) =>
+            this.updateSettings({
+              showAmbiguousEmptyListMarkers: value,
+            }),
+          ),
+      );
+
+    new Setting(containerEl)
       .setName('Missing list markers')
       .setDesc(
         'Highlight under-indented text that appears to have lost an unordered-list marker before deeper sibling items.',
@@ -107,7 +124,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('Click gutter icons to fix')
       .setDesc(
-        'Fix highlighted gremlins. Orphaned list markers dedent their contiguous block; missing markers are restored and aligned.',
+        'Fix highlighted gremlins. List fixes can normalize indentation, restore markers, or delimit ambiguous empty markers.',
       )
       .addToggle((toggle) =>
         toggle

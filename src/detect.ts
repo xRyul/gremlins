@@ -11,7 +11,12 @@ const MARKDOWN_LIST_ITEM = /^([\t ]+)(?=(?:[-+*]|\d+[.)])(?:[\t ]|$))/;
 const MARKDOWN_LIST_LINE =
   /^([\t ]*)(?:[-+*]|\d+[.)])(?:[\t ]|$)/;
 const MARKDOWN_UNORDERED_LIST_LINE = /^([\t ]*)([-+*])(?:[\t ]|$)/;
-const PARSERLESS_LIST_CONTEXT: MarkdownListContext = 'nested-list-item';
+const AMBIGUOUS_EMPTY_LIST_MARKER = /^([\t ]*)-$/;
+const MARKDOWN_LIST_LINE_WITH_CONTENT =
+  /^([\t ]*)([-+*]|\d+[.)])([\t ]{1,4})\S/;
+const MARKDOWN_DASH_LIST_ITEM_WITH_CONTENT = /^([\t ]*)-[\t ]+\S/;
+const BLOCKQUOTE_PREFIX = /^(?:[\t ]*>[\t ]?)+/;
+const PARSERLESS_LIST_CONTEXT: MarkdownListContext = 'parserless';
 
 export function detectGremlins(
   text: string,
@@ -96,6 +101,21 @@ export function detectLineGremlins(
     }
   }
 
+  if (settings.showAmbiguousEmptyListMarkers) {
+    const ambiguousEmptyListMarker = detectAmbiguousEmptyListMarker(
+      previousLine,
+      text,
+      nextLine,
+      lineFrom,
+      line,
+      effectiveIndentSize,
+      listContext,
+    );
+    if (ambiguousEmptyListMarker) {
+      matches.push(ambiguousEmptyListMarker);
+    }
+  }
+
   if (settings.showMissingListMarkers) {
     const missingListMarker = detectMissingListMarker(
       previousLine,
@@ -164,11 +184,98 @@ function listIndentationReason(
     return 'orphaned' as const;
   }
 
-  return context === 'nested-list-item' &&
+  return (
+    context === 'nested-list-item' ||
+    context === 'parserless'
+  ) &&
     !indentation.includes('\t') &&
     indentation.length % indentSize !== 0
     ? ('misaligned' as const)
     : null;
+}
+
+function detectAmbiguousEmptyListMarker(
+  previousLine: string | undefined,
+  text: string,
+  nextLine: string | undefined,
+  lineFrom: number,
+  line: number,
+  indentSize: number,
+  listContext: MarkdownListContext,
+): GremlinMatch | null {
+  const markerContent = markdownLineContent(text);
+  const previousContent = markdownLineContent(previousLine);
+  const nextContent = markdownLineContent(nextLine);
+  const markerLine = AMBIGUOUS_EMPTY_LIST_MARKER.exec(markerContent.text);
+  const previousListItem = MARKDOWN_LIST_LINE_WITH_CONTENT.exec(
+    previousContent.text,
+  );
+  const nextListItem = MARKDOWN_DASH_LIST_ITEM_WITH_CONTENT.exec(
+    nextContent.text,
+  );
+  const isListContext =
+    listContext === 'blockquote' ||
+    listContext === 'list-continuation' ||
+    listContext === 'nested-list-item' ||
+    listContext === 'plain-text' ||
+    listContext === 'root-list-item';
+
+  if (
+    !markerLine ||
+    !previousListItem ||
+    !nextListItem ||
+    !isListContext ||
+    markerContent.prefix !== previousContent.prefix ||
+    markerContent.prefix !== nextContent.prefix
+  ) {
+    return null;
+  }
+
+  const indentation = markerLine[1] ?? '';
+  const previousIndentation = previousListItem[1] ?? '';
+  const previousMarker = previousListItem[2];
+  const previousDelimiter = previousListItem[3];
+  const nextIndentation = nextListItem[1] ?? '';
+  const currentWidth = indentationWidth(indentation, indentSize);
+  const previousWidth = indentationWidth(previousIndentation, indentSize);
+  const parentMarkerEnd =
+    previousWidth + (previousMarker?.length ?? 0);
+  const minimumChildWidth = indentationWidth(
+    previousDelimiter ?? '',
+    indentSize,
+    parentMarkerEnd,
+  );
+  const followsParent =
+    previousMarker !== undefined &&
+    previousDelimiter !== undefined &&
+    currentWidth >= minimumChildWidth &&
+    currentWidth <= minimumChildWidth + 3;
+  const followsSibling =
+    previousIndentation === indentation && previousMarker === '-';
+
+  if (nextIndentation !== indentation || (!followsParent && !followsSibling)) {
+    return null;
+  }
+
+  const markerFrom =
+    lineFrom + markerContent.prefix.length + indentation.length;
+  return {
+    codePoint: null,
+    count: 1,
+    from: markerFrom,
+    kind: 'ambiguous-empty-list-marker',
+    line,
+    name: 'ambiguous empty list marker',
+    severity: 'warning',
+    to: markerFrom + 1,
+    zeroWidth: false,
+  };
+}
+
+function markdownLineContent(text: string | undefined) {
+  const source = text ?? '';
+  const prefix = BLOCKQUOTE_PREFIX.exec(source)?.[0] ?? '';
+  return { prefix, text: source.slice(prefix.length) };
 }
 
 function detectMissingListMarker(
@@ -235,8 +342,12 @@ function isDefinitionEnabled(
     : settings.showDangerousCharacters;
 }
 
-function indentationWidth(indentation: string, indentSize: number) {
-  let width = 0;
+function indentationWidth(
+  indentation: string,
+  indentSize: number,
+  initialWidth = 0,
+) {
+  let width = initialWidth;
 
   for (const character of indentation) {
     width =
