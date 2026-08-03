@@ -185,6 +185,36 @@ describe('list item punctuation', () => {
     );
   });
 
+  it('allows a colon when a parent item introduces a nested list', () => {
+    for (const [policy, punctuation] of [
+      ['none', ''],
+      ['period', '.'],
+      ['consistent', '.'],
+    ] as const) {
+      const text = [
+        '- **Library** - A report can provide:   ^dvu2m0',
+        `    - First child${punctuation}`,
+        `    - Second child${punctuation}`,
+        `- Next parent${punctuation}`,
+      ].join('\n');
+
+      assert.deepEqual(endings(text, policy), []);
+    }
+
+    const formalList = [
+      '- First;',
+      '- Parent:   ^parent-id',
+      '    - Child.',
+    ].join('\n');
+    assert.deepEqual(endings(formalList, 'semicolon-final-period'), []);
+  });
+
+  it('still enforces punctuation on a colon without a nested list', () => {
+    const text = ['- Leaf:', '- Next.'].join('\n');
+
+    assert.deepEqual(endings(text, 'period').map(({ line }) => line), [0]);
+  });
+
   it('checks the final content line of a multiline item', () => {
     const text = [
       '- First line',
@@ -590,6 +620,20 @@ describe('list item line endings', () => {
     assert.equal(
       fixDocument(text, matches),
       ['- None  ', '- One  ', '- Two  ', '- Three  '].join('\n'),
+    );
+  });
+
+  it('does not require hard-break spaces after an Obsidian block ID', () => {
+    const text = ['- Parent: ^parent-id', '    - Child'].join('\n');
+    const matches = detectListItemEndingGremlins(
+      text,
+      settings('disabled', 'two-spaces'),
+    );
+
+    assert.deepEqual(matches.map(({ line }) => line), [1]);
+    assert.equal(
+      fixDocument(text, matches),
+      ['- Parent: ^parent-id', '    - Child  '].join('\n'),
     );
   });
 

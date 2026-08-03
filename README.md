@@ -91,13 +91,13 @@ When fixed, the line is aligned with the following list item and receives the sa
 
 This rule can require no terminal punctuation, periods, semicolons, or semicolons followed by a period on the final item. It can also infer the dominant style independently for each contiguous list and nested level; when styles are tied, the first item decides. The conventional semicolon/final-period pattern is recognized automatically.
 
-Ordered, unordered, task, nested, multiline, and blockquoted list items are supported. For multiline items, the final content line is checked. Fenced code, frontmatter, and other parser-recognized literal Markdown are ignored.
+Ordered, unordered, task, nested, multiline, and blockquoted list items are supported. For multiline items, the final content line is checked. A parent item ending in a colon that introduces a nested list is treated as structural and left unchanged. Fenced code, frontmatter, and other parser-recognized literal Markdown are ignored.
 
 When fixed, Gremlins inserts, replaces, or removes the terminal punctuation selected for that list.
 
 ### 9. List item line endings - disabled by default
 
-This rule offers three policies: remove trailing whitespace, require exactly two ordinary trailing spaces for a Markdown hard break, or require a blank line between sibling list items. Blank-line fixes are placed after a nested subtree so the parent list structure is preserved.
+This rule offers three policies: remove trailing whitespace, require exactly two ordinary trailing spaces for a Markdown hard break, or require a blank line between sibling list items. The hard-break policy skips lines ending in Obsidian block IDs because trailing spaces would invalidate the block reference. Blank-line fixes are placed after a nested subtree so the parent list structure is preserved.
 
 When fixed, Gremlins normalizes only the selected line-ending behavior. The final list item is not given an extra blank separator.
 

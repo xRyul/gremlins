@@ -78,15 +78,27 @@ function detectPunctuationGremlins(
       (item): item is ListItem & { endpoint: ItemEndpoint } =>
         item.endpoint !== null,
     );
-    if (items.length === 0 || (policy === 'consistent' && items.length < 2)) {
+    // Structural colons do not influence inference, but retain their formal-list position.
+    const policyItems =
+      policy === 'consistent'
+        ? items.filter((item) => !isNestedListIntroducer(item))
+        : items;
+    if (
+      policyItems.length === 0 ||
+      (policy === 'consistent' && policyItems.length < 2)
+    ) {
       continue;
     }
 
-    const expected = expectedPunctuation(items, policy);
-    for (let index = 0; index < items.length; index += 1) {
-      const item = items[index];
+    const expected = expectedPunctuation(policyItems, policy);
+    for (let index = 0; index < policyItems.length; index += 1) {
+      const item = policyItems[index];
       const expectedPunctuation = expected[index];
-      if (!item || expectedPunctuation === undefined) {
+      if (
+        !item ||
+        expectedPunctuation === undefined ||
+        isNestedListIntroducer(item)
+      ) {
         continue;
       }
 
@@ -98,6 +110,14 @@ function detectPunctuationGremlins(
   }
 
   return matches;
+}
+
+function isNestedListIntroducer(
+  item: ListItem & { endpoint: ItemEndpoint },
+) {
+  return (
+    item.hasNestedList && terminalPunctuation(item.endpoint).value === ':'
+  );
 }
 
 function expectedPunctuation(
@@ -225,6 +245,11 @@ function trailingWhitespaceMatch(
   endpoint: ItemEndpoint,
   expected: 'no-trailing-whitespace' | 'two-spaces',
 ): ListItemLineEndingGremlinMatch | null {
+  // Obsidian block IDs must remain at the physical end of their source line.
+  if (expected === 'two-spaces' && endpoint.hasBlockId) {
+    return null;
+  }
+
   const actual = endpoint.line.text.slice(endpoint.trailingFrom);
   const replacement = expected === 'two-spaces' ? '  ' : '';
   if (actual === replacement) {

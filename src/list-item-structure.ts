@@ -37,6 +37,7 @@ interface ParsedListMarker {
 export interface ItemEndpoint {
   contentStart: number;
   effectiveEnd: number;
+  hasBlockId: boolean;
   line: SourceLine;
   trailingFrom: number;
 }
@@ -49,6 +50,7 @@ export interface ListItem {
   endpoint: ItemEndpoint | null;
   lineEndingEndpoint: ItemEndpoint | null;
   group: ListGroup;
+  hasNestedList: boolean;
   indentationWidth: number;
   markerLine: number;
   quoteDepth: number;
@@ -167,6 +169,10 @@ function parseListGroups(
         continue;
       }
 
+      if (parent) {
+        parent.hasNestedList = true;
+      }
+
       const group = previousSibling?.group ?? { items: [] };
       if (!previousSibling) {
         groups.push(group);
@@ -176,6 +182,7 @@ function parseListGroups(
       const item: ListItem = {
         endpoint: endpoints.punctuation,
         group,
+        hasNestedList: false,
         indentationWidth: acceptedMarker.indentationWidth,
         lineEndingEndpoint: endpoints.lineEnding,
         markerLine: line.index,
@@ -307,6 +314,7 @@ function endpointsForMarker(
       lineEnding: {
         contentStart: marker.contentStart,
         effectiveEnd: trailingFrom,
+        hasBlockId: false,
         line,
         trailingFrom,
       },
@@ -328,7 +336,13 @@ function endpointForContent(line: SourceLine, contentStart: number) {
   }
 
   return effectiveEnd > contentStart
-    ? { contentStart, effectiveEnd, line, trailingFrom }
+    ? {
+        contentStart,
+        effectiveEnd,
+        hasBlockId: blockId !== null,
+        line,
+        trailingFrom,
+      }
     : null;
 }
 
