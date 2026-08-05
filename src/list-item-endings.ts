@@ -83,7 +83,7 @@ function detectPunctuationGremlins(
     // Semantic endings do not influence inference, but retain their formal-list position.
     const policyItems =
       policy === 'consistent'
-        ? items.filter((item) => !isPunctuationExempt(item))
+        ? items.filter((item) => !isPunctuationExempt(item, policy))
         : items;
     if (
       policyItems.length === 0 ||
@@ -99,7 +99,7 @@ function detectPunctuationGremlins(
       if (
         !item ||
         expectedPunctuation === undefined ||
-        isPunctuationExempt(item)
+        isPunctuationExempt(item, policy)
       ) {
         continue;
       }
@@ -116,12 +116,25 @@ function detectPunctuationGremlins(
 
 function isPunctuationExempt(
   item: ListItem & { endpoint: ItemEndpoint },
+  policy: Exclude<ListItemPunctuationPolicy, 'disabled'>,
 ) {
   const punctuation = terminalPunctuation(item.endpoint).value;
   return (
+    (policy === 'period' && isStandalonePeriodFragment(item.endpoint)) ||
     (item.hasNestedList && punctuation === ':') ||
     isMeaningfulSentenceEnding(punctuation) ||
     endsWithDisplayMath(item.endpoint)
+  );
+}
+
+function isStandalonePeriodFragment(endpoint: ItemEndpoint) {
+  const content = endpoint.line.text.slice(
+    endpoint.contentStart,
+    endpoint.effectiveEnd,
+  );
+  return (
+    /^!?\[\[[^\]]+\]\]$/.test(content) ||
+    /^\p{Lu}[\p{Lu}\p{N}_-]*$/u.test(content)
   );
 }
 

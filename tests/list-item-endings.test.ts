@@ -339,6 +339,27 @@ describe('list item punctuation', () => {
     );
   });
 
+  it('does not require a period after a standalone wikilink', () => {
+    const text = [
+      '- [[2026-07-27 - ENERGISE - 10am - Standup]] - Date when Project was handed to me',
+      '- [[2026-07-27 - ENERGISE - 2pm - Sprint 73 start - Sprint Retro]]  ',
+    ].join('\n');
+    const matches = endings(text, 'period');
+
+    assert.deepEqual(matches.map(({ line }) => line), [0]);
+    assert.equal(
+      fixDocument(text, matches),
+      [
+        '- [[2026-07-27 - ENERGISE - 10am - Standup]] - Date when Project was handed to me.',
+        '- [[2026-07-27 - ENERGISE - 2pm - Sprint 73 start - Sprint Retro]]  ',
+      ].join('\n'),
+    );
+  });
+
+  it('does not require a period after a standalone single-token all-caps label', () => {
+    assert.deepEqual(endings('- [ ] TALESCAPE  ', 'period'), []);
+  });
+
   it('highlights a complete trailing Unicode code point', () => {
     const matches = endings('- 👾', 'period');
 
