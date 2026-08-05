@@ -128,7 +128,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('List item punctuation')
       .setDesc(
-        'Enforce style punctuation within each list while preserving questions, exclamations, ellipses, display math, standalone wikilinks, and single-token all-caps labels under the period policy. Automatic matching infers each list independently.',
+        'Enforce style punctuation within each list while preserving meaningful sentence endings and display math. The period policy skips standalone wikilinks, single-token all-caps labels, and unpunctuated items that introduce nested lists. Automatic matching infers each list independently.',
       )
       .addDropdown((dropdown) =>
         dropdown

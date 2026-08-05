@@ -119,8 +119,14 @@ function isPunctuationExempt(
   policy: Exclude<ListItemPunctuationPolicy, 'disabled'>,
 ) {
   const punctuation = terminalPunctuation(item.endpoint).value;
+  const isUnpunctuatedMarkerLineParent =
+    item.hasNestedList &&
+    punctuation === '' &&
+    item.endpoint.line.index === item.markerLine;
   return (
-    (policy === 'period' && isStandalonePeriodFragment(item.endpoint)) ||
+    (policy === 'period' &&
+      (isStandalonePeriodFragment(item.endpoint) ||
+        isUnpunctuatedMarkerLineParent)) ||
     (item.hasNestedList && punctuation === ':') ||
     isMeaningfulSentenceEnding(punctuation) ||
     endsWithDisplayMath(item.endpoint)

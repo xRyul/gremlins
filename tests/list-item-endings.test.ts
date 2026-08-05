@@ -360,6 +360,20 @@ describe('list item punctuation', () => {
     assert.deepEqual(endings('- [ ] TALESCAPE  ', 'period'), []);
   });
 
+  it('does not require periods after labels that introduce nested lists', () => {
+    const text = [
+      '- [ ] Work  ',
+      '    - [x] Work on Project: **Library upload download** of the report [[2026-07-27 - ENERGISE - 10am - Standup]] + [[2026-07-28 - ENERGISE - 10am - Standup]]  ',
+      '- [x] Home   ',
+      '    - [x] [[Obsidian Image Converter]]  ',
+    ].join('\n');
+
+    assert.deepEqual(
+      endings(text, 'period').map(({ line }) => line),
+      [1],
+    );
+  });
+
   it('highlights a complete trailing Unicode code point', () => {
     const matches = endings('- 👾', 'period');
 
