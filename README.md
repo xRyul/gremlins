@@ -111,6 +111,14 @@ When fixed, Gremlins normalizes only the selected line-ending behavior. The fina
 | `U+201C` / `U+201D` | Curly double quotes `“ ”` | Straight quote `"` |
 
 
+## Fix a code block
+
+With **Gutter icons** and **Click gutter icons to fix** enabled, a larger bug button appears beside the opening fence of a code block that contains fixable gremlins. Click it to apply the enabled character and mixed-indentation fixes throughout that block, including lines outside the viewport. Markdown list-formatting rules are not applied to code.
+
+The block is changed in one editor transaction, so one Undo restores it. Visible line icons play the existing explosion animation from top to bottom; reduced-motion preferences disable the animation. Individual line icons continue to work as before. The larger button can also be focused with Tab and activated with Enter or Space.
+
+This feature supports ordinary backtick and tilde fences and fences in blockquotes, including an unfinished final fence. It does not add a button for indented code or list-nested fences indented by four or more spaces. It is available in the editor (Source mode and Live Preview), not Reading view.
+
 ## Important
 
 The plugin does **not automatically replace anything**:

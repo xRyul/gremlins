@@ -16,6 +16,12 @@ import {
 } from '@codemirror/view';
 import { setIcon } from 'obsidian';
 
+import { createCodeBlockScanner, type CodeBlockFix } from './code-blocks.ts';
+import {
+  captureVisibleGremlins,
+  GremlinCascade,
+  showGremlinExplosion,
+} from './gremlin-animation.ts';
 import { detectLineGremlins } from './detect.ts';
 import {
   buildGremlinFixChangesForDocument,
@@ -67,6 +73,38 @@ class GremlinGutterMarker extends GutterMarker {
   }
 }
 
+class CodeBlockGutterMarker extends GutterMarker {
+  constructor(
+    private readonly from: number,
+    private readonly affectedLineCount: number,
+    private readonly fixBlock: (view: EditorView, from: number) => void,
+  ) {
+    super();
+  }
+
+  eq(other: CodeBlockGutterMarker) {
+    return this.from === other.from &&
+      this.affectedLineCount === other.affectedLineCount &&
+      this.fixBlock === other.fixBlock;
+  }
+
+  toDOM(view: EditorView) {
+    const button = view.dom.ownerDocument.createElement('button');
+    button.type = 'button';
+    button.className = 'gremlins-block-marker';
+    // Obsidian uses aria-label for tooltips. A title would add a second tooltip.
+    button.setAttribute('aria-label', `Fix code block (${this.affectedLineCount} affected lines)`);
+    setIcon(button, GREMLIN_ICON_ID);
+    button.addEventListener('mousedown', (event) => event.preventDefault());
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      this.fixBlock(view, this.from);
+    });
+    return button;
+  }
+}
+
 function createGutterMarkers(interactive: boolean) {
   return {
     error: new GremlinGutterMarker('error', interactive),
@@ -92,12 +130,29 @@ export function createGremlinsEditorExtension(
       decorations: DecorationSet = Decoration.none;
       markers = RangeSet.empty as RangeSet<GutterMarker>;
       matches: GremlinMatch[] = [];
+      private readonly scanBlocks = createCodeBlockScanner(settings);
+      private readonly cascade = new GremlinCascade();
+
+      private readonly fixBlock = (view: EditorView, from: number) => {
+        if (!settings.showGutterIcons || !settings.enableClickToFix) return;
+        // Look up current positions instead of applying a stale button's changes.
+        const block = this.scanBlocks(view.state.doc, view.state.tabSize)
+          .find((candidate) => candidate.from === from);
+        if (!block) return;
+        const captures = captureVisibleGremlins(view, block.affectedLines);
+        view.focus();
+        view.dispatch({ changes: block.changes, userEvent: 'input.gremlins.fix' });
+        this.cascade.play(view, captures);
+      };
 
       constructor(view: EditorView) {
         this.refresh(view);
       }
 
       update(update: ViewUpdate) {
+        if (update.docChanged) {
+          this.cascade.stop();
+        }
         if (
           update.docChanged ||
           update.viewportChanged ||
@@ -108,8 +163,15 @@ export function createGremlinsEditorExtension(
         }
       }
 
+      destroy() {
+        this.cascade.stop();
+      }
+
       private refresh(view: EditorView) {
-        const result = buildVisibleGremlins(view, settings);
+        const blocks = settings.showGutterIcons && settings.enableClickToFix
+          ? this.scanBlocks(view.state.doc, view.state.tabSize)
+          : [];
+        const result = buildVisibleGremlins(view, settings, blocks, this.fixBlock);
         this.decorations = result.decorations;
         this.markers = result.markers;
         this.matches = result.matches;
@@ -181,11 +243,14 @@ interface VisibleGremlins {
 function buildVisibleGremlins(
   view: EditorView,
   settings: GremlinsSettings,
+  codeBlocks: readonly CodeBlockFix[],
+  fixBlock: (view: EditorView, from: number) => void,
 ): VisibleGremlins {
   const decorationBuilder = new RangeSetBuilder<Decoration>();
   const markerBuilder = new RangeSetBuilder<GutterMarker>();
   const matches: GremlinMatch[] = [];
   const visitedLines = new Set<number>();
+  const codeBlocksByLine = new Map(codeBlocks.map((block) => [block.openingLine, block]));
   const listItemEndingMatchesByLine = new Map<number, GremlinMatch[]>();
   for (const match of detectEditorListItemEndingGremlins(
     view.state,
@@ -236,7 +301,12 @@ function buildVisibleGremlins(
           );
         }
 
-        if (lineMatches.length > 0) {
+        const codeBlock = codeBlocksByLine.get(line.number);
+        if (codeBlock) {
+          markerBuilder.add(line.from, line.from, new CodeBlockGutterMarker(
+            codeBlock.from, codeBlock.affectedLines.length, fixBlock,
+          ));
+        } else if (lineMatches.length > 0) {
           const severity = highestSeverity(
             lineMatches.map((match) => match.severity),
           );
@@ -307,39 +377,6 @@ function fixGremlinsOnLine(
   });
   view.focus();
   return true;
-}
-
-function showGremlinExplosion(
-  view: EditorView,
-  marker: Element,
-  event: Event,
-) {
-  const document = view.dom.ownerDocument;
-  const ownerWindow = document.defaultView;
-  if (ownerWindow?.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    return;
-  }
-
-  const markerBounds = marker.getBoundingClientRect();
-  const pointerEvent = event as MouseEvent;
-  const fromPointer = pointerEvent.detail > 0;
-  const left = fromPointer
-    ? pointerEvent.clientX
-    : markerBounds.left + markerBounds.width / 2;
-  const top = fromPointer
-    ? pointerEvent.clientY
-    : markerBounds.top + markerBounds.height / 2;
-  const explosion = document.createElement('span');
-  explosion.className = 'gremlins-explosion';
-  explosion.setAttribute('aria-hidden', 'true');
-  explosion.style.left = `${left}px`;
-  explosion.style.top = `${top}px`;
-  document.body.appendChild(explosion);
-
-  explosion.addEventListener('animationend', () => explosion.remove(), {
-    once: true,
-  });
-  ownerWindow?.setTimeout(() => explosion.remove(), 500);
 }
 
 function decorationClasses(match: GremlinMatch) {
