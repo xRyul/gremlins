@@ -285,7 +285,10 @@ read -r -d '' application_helpers <<'JS' || true
     return true;
   };
   test.highlights = kind => Array.from(test.leaf.view.contentEl.querySelectorAll(`[data-gremlin="${kind}"]`))
-    .map(element => ({from: test.leaf.view.editor.cm.posAtDOM(element), text: element.textContent,
+    .map(element => ({from: test.leaf.view.editor.cm.posAtDOM(element),
+      to: test.leaf.view.editor.cm.posAtDOM(element, element.childNodes.length), text: element.textContent,
+      severity: ['error', 'warning', 'info'].find(level => element.classList.contains('gremlins-severity-' + level)),
+      zeroWidth: element.classList.contains('gremlins-zero-width'),
       warning: element.classList.contains('gremlins-severity-warning')}));
   return true;
 })()
@@ -300,6 +303,7 @@ if [[ ${1:-} == --fail-after-setup ]]; then
   fail 'The intentional application error was not detected'
 fi
 
+source tests/e2e/detect.sh
 source tests/e2e/editor-tooltip.sh
 source tests/e2e/ambiguous-empty-list-marker.sh
 errors=$(obsidian_command dev:errors)

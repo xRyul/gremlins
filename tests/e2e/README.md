@@ -27,6 +27,17 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 
 The old tabbed example without a root list is actually indented code in Obsidian and is retained as a negative fixture. `tabbed-nested-parent.md` adds a real root list to exercise the intended positive tab-width cases. The old parserless checks are represented by real fenced/indented-code documents, not by simulating a missing parser.
 
+`detect.sh` replaces `tests/detect.test.ts` with 22 scenarios in both editor modes (44 executions). The original 23 unit checks are covered by four groups; quote and dash checks share one scenario:
+
+- Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
+- Mixed indentation, pure tabs/spaces, multiline source offsets and the disabled rule.
+- Root/orphaned lists, nested alignment at indent widths 2/4, non-list content, literal regions and defaults.
+- Missing markers in pasted task lists, copying tab indentation/star markers, and ordinary continuation text.
+
+Checks compare actual highlighted source ranges, inspection notices, command fixes and persisted note contents. Obsidian can split one indentation highlight into several DOM spans; contiguous fragments are compared as a source range, while Unicode grouping is checked separately.
+
+Unlike the old parserless indentation examples, `deep-list-indentation.md` and `list-indent-width.md` have real parent lists. Independent root markers are tested as orphaned even at four spaces or one tab; an aligned child is tested separately. `fenced-parent.md` and `tabbed-parent.md` are shared with the ambiguous-marker suite, with different rule settings and expectations.
+
 `editor-tooltip.sh` retains the live character/gutter tooltip and list-ending regression checks using the same fixture lifecycle.
 
 ## Failures and interrupted runs
