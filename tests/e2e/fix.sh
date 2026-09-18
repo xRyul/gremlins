@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
-# Sourced by run.sh. Fix the loaded editor, never synthetic GremlinMatch objects.
+# Responsibilities: user-requested fixes in real Obsidian, in Source and Live Preview.
+# Exercise command and gutter actions; check complete edits, saved contents, preserved
+# text/block boundaries, combined fixes, no-ops and remaining warnings. Highlights
+# are preconditions here; exact ranges, styling and inspection belong in detect.sh.
+# Sourced by run.sh, which owns fixture isolation, CLI transport and cleanup.
 read -r -d '' fix_cases <<'JS' || true
 (() => {
   const test = window.__gremlinsE2E;
   test.fixCases = [
     {name: 'all deletion-only Unicode controls', file: 'fix-controls.md', steps: [
       {line: 1, marks: {character: '\u0003\u00ad\u180e\u200b\u200c\u200e\u200f\u202a\u202b\u202c\u202d\u202e\u2060\u2066\u2067\u2068\u2069\ufeff\ufffc'}, fixed: {1: 'ab'}},
+    ]},
+    {name: 'delete a grouped run of zero-width spaces', file: 'zero-width-spaces.md', steps: [
+      {line: 0, marks: {character: '\u200b\u200b'}, fixed: {0: 'ab'}},
     ]},
     {name: 'Unicode spaces including consecutive NBSPs', file: 'fix-spaces.md', steps: [
       {line: 1, marks: {character: '\u00a0\u00a0\u2007\u202f'}, fixed: {1: 'a  b c d'}},
@@ -21,6 +28,12 @@ read -r -d '' fix_cases <<'JS' || true
     ]},
     {name: 'tab-indented block retains nested children', file: 'fix-orphaned-tabs.md', settings: {showListIndentation: true}, steps: [
       {line: 1, marks: {'list-indentation': '\t'}, fixed: {1: '- Parent', 2: '\t- Child', 3: '- Sibling'}},
+    ]},
+    {name: 'tabbed block dedent preserves marker delimiters and empty children', file: 'tabbed-parent.md', settings: {showListIndentation: true}, steps: [
+      {line: 0, marks: {'list-indentation': '\t'}, fixed: {0: '-\tParent', 1: '\t-', 2: '\t- Child'}},
+    ]},
+    {name: 'dedent mixed ordered/unordered markers parsed as code', file: 'list-shaped-code.md', settings: {showListIndentation: true}, steps: [
+      {line: 0, marks: {'list-indentation': '    '}, fixed: {0: '1. ordered item', 1: '- unordered item'}},
     ]},
     {name: 'space-indented block fixed from a deeper child', file: 'fix-orphaned-spaces.md', settings: {showListIndentation: true}, steps: [
       {line: 3, marks: {'list-indentation': '        '}, fixed: {1: '- Lack of clarity', 2: '- Requirements confusion',
@@ -55,6 +68,9 @@ read -r -d '' fix_cases <<'JS' || true
     {name: 'restore pasted list marker and indentation', file: 'missing-list-marker.md', settings: {showMissingListMarkers: true}, steps: [
       {line: 2, marks: {'missing-list-marker': '    '}, fixed: {2: '            - Confirm the archive structure'}},
     ]},
+    {name: 'missing marker copies following star and tabs', file: 'tabbed-missing-list-marker.md', settings: {showMissingListMarkers: true}, steps: [
+      {line: 2, marks: {'missing-list-marker': '\t'}, fixed: {2: '\t\t\t* Missing item'}},
+    ]},
     {name: 'insert only the missing empty-marker delimiter', file: 'parent-child.md', settings: {showAmbiguousEmptyListMarkers: true}, steps: [
       {line: 1, marks: {'ambiguous-empty-list-marker': '-'}, fixed: {1: '    - '}},
     ]},
@@ -86,6 +102,33 @@ read -r -d '' fix_cases <<'JS' || true
     {name: 'one-space root dedents to zero', file: 'fix-root-one-space.md', settings: {showListIndentation: true}, steps: [
       {line: 1, marks: {'list-indentation': ' '}, fixed: {1: '- Item'}},
     ]},
+    {name: 'dedent independent root markers at different space/tab widths', file: 'root-list-indentation.md', settings: {showListIndentation: true}, steps: [
+      {line: 8, marks: {'list-indentation': '\t'}, fixed: {8: '- tab'}},
+      {line: 6, marks: {'list-indentation': '    '}, fixed: {6: '- four'}},
+      {line: 4, marks: {'list-indentation': '   '}, fixed: {4: '1. three'}},
+      {line: 2, marks: {'list-indentation': '  '}, fixed: {2: '* two'}},
+      {line: 0, marks: {'list-indentation': ' '}, fixed: {0: '- one'}},
+    ]},
+    // These no-op actions used to live in detect.sh; read-only detection cannot prove them.
+    {name: 'typographic replacements disabled by default', file: 'typographic-punctuation.md', noFix: true, steps: [
+      {line: 0, marks: {character: ''}},
+    ]},
+    {name: 'pure tabs and spaces remain untouched', file: 'pure-indentation.md', noFix: true, steps: [
+      {line: 0, marks: {'mixed-indentation': ''}},
+    ]},
+    {name: 'disabled mixed-indentation rule cannot fix text', file: 'multiline-mixed-indentation.md', noFix: true,
+      settings: {showMixedIndentation: false}, steps: [{line: 1, marks: {'mixed-indentation': ''}}]},
+    {name: 'indented prose, quote and non-list code remain untouched', file: 'indented-non-list.md', noFix: true,
+      settings: {showListIndentation: true}, steps: [{line: 0, marks: {'list-indentation': ''}}]},
+    {name: 'aligned child with a real parent remains untouched', file: 'aligned-list.md', noFix: true,
+      settings: {showListIndentation: true}, steps: [{line: 1, marks: {'list-indentation': ''}}]},
+    {name: 'fenced list content remains untouched', file: 'fenced-parent.md', noFix: true,
+      settings: {showListIndentation: true}, steps: [{line: 2, marks: {'list-indentation': ''}}]},
+    {name: 'list-indentation fixes disabled by default', file: 'root-list-indentation.md', noFix: true, steps: [
+      {line: 0, marks: {'list-indentation': ''}},
+    ]},
+    {name: 'ordinary list continuation receives no marker', file: 'list-continuation.md', noFix: true,
+      settings: {showMissingListMarkers: true}, steps: [{line: 1, marks: {'missing-list-marker': ''}}]},
     {name: 'fixing disabled leaves the entire orphaned block untouched', file: 'fix-orphaned-tabs.md', noFix: true,
       settings: {showListIndentation: true, enableClickToFix: false}, steps: [
         {line: 1, marks: {'list-indentation': '\t'}},

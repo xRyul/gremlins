@@ -27,23 +27,24 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 
 The old tabbed example without a root list is actually indented code in Obsidian and is retained as a negative fixture. `tabbed-nested-parent.md` adds a real root list to exercise the intended positive tab-width cases. The old parserless checks are represented by real fenced/indented-code documents, not by simulating a missing parser.
 
-`detect.sh` replaces `tests/detect.test.ts` with 22 scenarios in both editor modes (44 executions). The original 23 unit checks are covered by four groups; quote and dash checks share one scenario:
+`detect.sh` is the read-only detection suite: 22 scenarios in both editor modes (44 executions). It replaces the detection coverage from `tests/detect.test.ts`; quote and dash checks share one scenario:
 
 - Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
 - Mixed indentation, pure tabs/spaces, multiline source offsets and the disabled rule.
 - Root/orphaned lists, nested alignment at indent widths 2/4, non-list content, literal regions and defaults.
-- Missing markers in pasted task lists, copying tab indentation/star markers, and ordinary continuation text.
+- Missing markers in pasted task lists, tabbed/star-marker contexts, and ordinary continuation text.
 
-Checks compare actual highlighted source ranges, inspection notices, command fixes and persisted note contents. Obsidian can split one indentation highlight into several DOM spans; contiguous fragments are compared as a source range, while Unicode grouping is checked separately.
+Checks compare actual highlighted source ranges and inspection notices, then verify that both the editor and saved note remain unchanged. This suite never invokes a fix; editing and no-op fix actions belong in `fix.sh`. Obsidian can split one indentation highlight into several DOM spans; contiguous fragments are compared as a source range, while Unicode grouping is checked separately.
 
 Unlike the old parserless indentation examples, `deep-list-indentation.md` and `list-indent-width.md` have real parent lists. Independent root markers are tested as orphaned even at four spaces or one tab; an aligned child is tested separately. `fenced-parent.md` and `tabbed-parent.md` are shared with the ambiguous-marker suite, with different rule settings and expectations.
 
-`fix.sh` replaces the 27 checks in `tests/fix.test.ts` with 23 scenarios. Each starts from a fresh fixture for both the fix command and gutter click, in both editor modes (92 executions). Assertions check the actual highlighted text, whether the gutter offers a fix, the entire document after each edit, persisted file contents, and remaining warnings.
+`fix.sh` owns user-requested edits and no-op actions: 36 scenarios covering the former 27 checks in `tests/fix.test.ts` plus unique fix expectations moved out of `detect.sh`. Each starts from a fresh fixture for both the fix command and gutter click, in both editor modes (144 executions). Highlights are preconditions, not a repeat of the exact range/style assertions in `detect.sh`. Checks cover gutter interactivity, the entire document after each edit, persisted file contents, and remaining warnings.
 
-- All 31 currently supported Unicode characters: deletion-only controls, repeated/other Unicode spaces, line/paragraph separators and all six typographic replacements. Unknown astral characters remain untouched.
-- Block dedentation from parents and deeper children, preserving nested lists and continuation lines, and respecting blank lines and heading boundaries.
-- Combined block/character and block/empty-marker fixes, missing markers and empty-marker delimiters.
+- All 31 currently supported Unicode characters: deletion-only controls (including grouped zero-width spaces), repeated/other Unicode spaces, line/paragraph separators and all six typographic replacements. Unknown astral characters remain untouched.
+- Block dedentation from parents and deeper children, preserving nested lists, tabbed delimiters and continuation lines, and respecting blank lines and heading boundaries. Independent roots and mixed ordered/unordered code-shaped blocks are included.
+- Combined block/character and block/empty-marker fixes, missing markers (including copying a following star and tabs) and empty-marker delimiters.
 - Tab-led and space-led mixed indentation, list rounding at widths 2/4, and the disabled-fixing default.
+- No-op actions for disabled detection rules, pure indentation, non-list/literal content, aligned children and ordinary list continuation.
 
 The old synthetic first-line ambiguous match had no preceding list item. `fix-orphaned-empty-root.md` therefore verifies only a block dedent; `fix-orphaned-empty-siblings.md` supplies real preceding/following siblings for the combined fix. The old one-space misaligned match is exercised as a real orphaned root, while larger misalignments use genuine children. Internal helper-only no-op checks are represented by real unknown-character and disabled-fixing scenarios, not injected match objects.
 
