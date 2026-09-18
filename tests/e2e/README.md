@@ -60,7 +60,6 @@ These are destinations for future migrations, not a claim that the remaining cov
 
 | Existing file under `tests/` | Live destination |
 |---|---|
-| `markdown-context.test.ts` | Real Markdown fixtures and their detection outcomes in `detect.sh`. |
 | `match-position.test.ts` | Cursor inspection in `detect.sh`; hover-boundary behaviour in `editor-tooltip.sh`. |
 | `presentation.test.ts` | Actual inspection notices, tooltip content or icon severity, according to the visible output being checked. |
 | `settings.test.ts` | Application defaults and disabled-rule behaviour in the relevant detection/fixing scenarios, not a separate settings suite. |
@@ -82,11 +81,11 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 
 ## Coverage
 
-`detect.sh` is the read-only detection suite: 147 scenarios in both Source mode and Live Preview (294 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, list-marker-cleanup and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
+`detect.sh` is the read-only detection suite: 150 scenarios in both Source mode and Live Preview (300 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, Markdown-context, list-marker-cleanup and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
 
 - Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
 - Mixed indentation, pure tabs/spaces, multiline source offsets and the disabled rule.
-- Root/orphaned lists, nested alignment at indent widths 2/4, non-list content, literal regions and defaults.
+- Root/orphaned lists, nested alignment at indent widths 2/4, absolute depth when level-four marker styles cycle, non-list content, literal regions and defaults.
 - Ambiguous empty list markers: parent/child and sibling contexts, marker/delimiter widths, blockquotes, literal-region exclusions, defaults and tab widths 2/4/8 (21 scenarios).
 - Duplicate markers and marker spacing: unordered/ordered delimiters, tabs, compact nesting, quoted lists, digit limits, overlapping-rule suppression, defaults and literal/thematic/Setext exclusions.
 - Missing markers in pasted task lists, tabbed/star-marker contexts, and ordinary continuation text.
@@ -173,6 +172,26 @@ The 16 tests formerly in `tests/list-marker-cleanup.test.ts` are covered by 19 d
 Significant trailing spaces, thematic-break spacing and digit-boundary inputs have explicit byte guards. Synthetic literal classifications are replaced with actual fenced Markdown; potential Setext examples additionally exercise real headings. The original nonzero source offsets are retained using real preceding text.
 
 The nine- and ten-digit examples remain separate notes, matching the original separate detector calls. Combining them into one ordered-list note caused Obsidian's native automatic numbering to rewrite the second number during an edit; a plain `editor.replaceRange()` reproduced that independently of Gremlins. The tests keep their original isolated inputs rather than accepting that unrelated edit or changing the vault's numbering settings.
+
+## Markdown-context migration
+
+The 11 checks formerly in `tests/markdown-context.test.ts` are represented by observable detection outcomes and the existing unavailable-parser contract. Three new scenarios (six Source/Live Preview executions) close the depth-four and literal-boundary gaps; the other cases reuse existing scenarios rather than duplicating executors or fixtures. No production code changes were needed.
+
+| Original classification check | Coverage |
+|---|---|
+| Root list without a parent | `root-list-indentation.md`: indented roots receive orphaned-list highlights and an orphan-specific inspection notice. |
+| Nested list level | `deep-list-indentation.md` and `list-indent-width.md`: malformed children receive alignment warnings, while `aligned-list.md` stays unflagged. |
+| Absolute depth when styles cycle at level four | `list-context-depth-four.md`: the aligned 12-space child stays unflagged; the 13-space sibling receives a misalignment highlight and notice, not an orphan warning. Obsidian exposes `list-1` styling but `HyperMD-list-line-4` depth for both. |
+| Continuation without a marker | `punctuation-multiline.md`: the warning belongs to the final continuation, not the earlier marker line. |
+| Inline code on a list continuation | `punctuation-code-continuation.md`: the closing backtick is the item endpoint and receives the punctuation warning. |
+| Comments/fences take precedence over list tokens | `list-context-nested-literals.md`: real nested comments/fences contain indented list-shaped text but receive neither indentation nor punctuation warnings; the following real item still requires a period. Existing nested-comment/fence inference scenarios also remain. |
+| Blockquote outside literal syntax | `blockquote.md`: the ambiguous hyphen inside the quote is highlighted; `punctuation-ordered-quote.md` checks a quoted ordered item. |
+| Parsed plain text remains eligible for detection | `root-siblings.md`: Obsidian exposes only `Document` at the lone hyphen; the ambiguous-marker warning still appears. |
+| Parser-recognized indented code | `list-shaped-code.md`: the opt-in indentation rule flags orphaned list shapes; `indented-code.md` remains excluded from punctuation and ambiguous-marker rules. |
+| Other inline-code literal content | The standalone inline-code line in `list-context-nested-literals.md` creates no list warning. Existing inline-code and lazy-code scenarios retain the contrasting cases where code belongs to an actual list item. |
+| Incomplete/unavailable syntax tree | `list-ending-fallback.test.ts`: a real unparsed CodeMirror state has `syntaxTreeAvailable(...) === false` and returns `unknown` through `getMarkdownListLineContext()`. This guard is not claimed as fully parsed E2E coverage. |
+
+These tests assert rendered ranges, notices and unchanged editor/saved content, not internal classifier labels or fabricated token arrays. The live runner deliberately waits for a complete parse, so the existing focused Node fallback assertion remains necessary.
 
 ## Failures and interrupted runs
 

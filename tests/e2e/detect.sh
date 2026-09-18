@@ -55,6 +55,9 @@ read -r -d '' detection_cases <<'JS' || true
         {line: 2, ch: 0, text: '     ', notice: 'List indentation · 5 leading spaces do not match the configured indent width · Warning'},
         {line: 3, ch: 0, text: '      '}, {line: 4, ch: 0, text: '       '},
       ]},
+    {name: 'level-four style cycling does not create orphaned roots', file: 'list-context-depth-four.md', kind: 'list-indentation',
+      settings: {showListIndentation: true}, marks: [{line: 4, ch: 0, text: '             ',
+        notice: 'List indentation · 13 leading spaces do not match the configured indent width · Warning'}]},
     {name: 'child alignment at indent width 4', file: 'list-indent-width.md', kind: 'list-indentation',
       settings: {showListIndentation: true}, marks: [{line: 1, ch: 0, text: '  '}, {line: 2, ch: 0, text: '   '}]},
     {name: 'child alignment at indent width 2', file: 'list-indent-width.md', kind: 'list-indentation', tabSize: 2,
@@ -71,6 +74,8 @@ read -r -d '' detection_cases <<'JS' || true
     {name: 'aligned child with a real parent', file: 'aligned-list.md', kind: 'list-indentation',
       settings: {showListIndentation: true}, marks: [], line: 1},
     {name: 'fenced literal list content', file: 'fenced-parent.md', kind: 'list-indentation',
+      settings: {showListIndentation: true}, marks: [], line: 2},
+    {name: 'nested comments, fences and standalone inline code are not orphaned lists', file: 'list-context-nested-literals.md', kind: 'list-indentation',
       settings: {showListIndentation: true}, marks: [], line: 2},
     {name: 'list indentation disabled by default', file: 'root-list-indentation.md', kind: 'list-indentation', marks: []},
 
@@ -237,6 +242,9 @@ read -r -d '' detection_cases <<'JS' || true
       ]},
       {name: 'nested comment is not an item endpoint', file: 'punctuation-nested-comment.md', policy: 'consistent', marks: [
         {line: 4, ch: 7, text: 'd', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+      ]},
+      {name: 'literal list shapes do not become punctuation targets', file: 'list-context-nested-literals.md', marks: [
+        {line: 10, ch: 5, text: 't', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
       ]},
       {name: 'root lazy continuation is the endpoint', file: 'punctuation-lazy-root.md', marks: [{line: 3, ch: 10, text: 'g'}]},
       {name: 'nested continuation and following parent paragraph', file: 'punctuation-lazy-nested.md', marks: [{line: 4, ch: 14, text: 'g'}, {line: 5, ch: 12, text: 't'}]},
