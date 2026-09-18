@@ -8,6 +8,9 @@ read -r -d '' detection_cases <<'JS' || true
 (() => {
   const test = window.__gremlinsE2E;
   test.assert(test.fixtures['pure-indentation.md'] === '\t\tNested\n    Nested\n', 'Pure-indentation fixture was reformatted');
+  test.assert(test.defaults.showAmbiguousEmptyListMarkers === false, 'Empty-marker rule must be disabled in application defaults');
+  test.assert(test.fixtures['delimited-marker.md'].split('\n')[1] === '    - ', 'Fixture lost its significant trailing space');
+  test.assert(test.fixtures['tabbed-parent.md'].startsWith('\t-\tParent\n\t\t-\n'), 'Fixture tabs were reformatted');
   test.detectionCases = [
     // Characters: grouping, severity, source ranges, defaults and opt-in punctuation.
     {name: 'consecutive zero-width spaces', file: 'zero-width-spaces.md', kind: 'character',
@@ -64,6 +67,33 @@ read -r -d '' detection_cases <<'JS' || true
     {name: 'fenced literal list content', file: 'fenced-parent.md', kind: 'list-indentation',
       settings: {showListIndentation: true}, marks: [], line: 2},
     {name: 'list indentation disabled by default', file: 'root-list-indentation.md', kind: 'list-indentation', marks: []},
+
+    // Ambiguous empty list markers: real parser contexts, source columns, defaults and tab widths.
+    ...[
+      {file: 'parent-child.md', ch: 4},
+      {file: 'root-siblings.md', ch: 0},
+      {file: 'parent-marker-width-3.md', ch: 3},
+      {file: 'parent-marker-width-8.md', ch: 8},
+      {file: 'parent-delimiter-valid.md', ch: 7},
+      {file: 'parent-delimiter-too-shallow.md'},
+      // Without a root list, Obsidian parses the original tabbed unit-test input as code.
+      ...[2, 4, 8].map(tabSize => ({file: 'tabbed-parent.md', tabSize})),
+      ...[2, 4, 8].map(tabSize => ({file: 'tabbed-nested-parent.md', tabSize, line: 2, ch: 2})),
+      {file: 'blockquote.md', ch: 6},
+      {file: 'setext-heading.md'},
+      {file: 'fenced-parent.md', line: 2},
+      {file: 'fenced-siblings.md', line: 2},
+      {file: 'indented-code.md'},
+      {file: 'deeper-following-item.md'},
+      {file: 'different-following-marker.md'},
+      {file: 'delimited-marker.md'},
+      {file: 'parent-child.md', defaults: true},
+    ].map(({file, ch, line = 1, tabSize = 4, defaults = false}) => ({
+      name: `ambiguous empty marker in ${file} (${defaults ? 'defaults' : 'enabled'})`,
+      file, line, tabSize, kind: 'ambiguous-empty-list-marker',
+      settings: defaults ? {} : {showAmbiguousEmptyListMarkers: true},
+      marks: ch === undefined ? [] : [{line, ch, text: '-'}],
+    })),
 
     // Missing markers: pasted task lists, tab widths/marker style, and legitimate continuation text.
     {name: 'missing marker in a pasted task list', file: 'missing-list-marker.md', kind: 'missing-list-marker',

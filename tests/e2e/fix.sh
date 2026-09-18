@@ -75,7 +75,7 @@ read -r -d '' fix_cases <<'JS' || true
       settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'}, steps: [
         {line: 1, marks: {'list-item-punctuation': 'd', 'list-item-line-ending': 'd'}, fixed: {1: '- Second.  '}},
       ]},
-    // Empty-marker edits live here; the dedicated rule suite only checks detection.
+    // Empty-marker edits live here; detect.sh only checks detection.
     ...[
       {file: 'parent-child.md', fixed: '    - '},
       {file: 'root-siblings.md', fixed: '- '},

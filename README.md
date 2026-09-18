@@ -123,7 +123,7 @@ The plugin does **not automatically replace anything**:
 
 `npm test` builds and tests Gremlins inside the running `plugin-testing-vault` through the official Obsidian CLI. Markdown fixtures are copied into `_gremlins_e2e/`, reset between scenarios, and removed after success or failure. Settings and the active tab are restored.
 
-See [the live testing guide](tests/e2e/README.md) for setup, coverage, cleanup verification and failure diagnostics. Remaining Node-only checks are available separately with `npm run test:unit`.
+Tests are organised by observable behaviour, not by individual settings or old unit-test filenames. See [test structure and migration rules](tests/e2e/README.md#organisation) for suite ownership and where new coverage belongs. The [live testing guide](tests/e2e/README.md) also covers setup, cleanup verification and failure diagnostics. Remaining Node-only checks are available separately with `npm run test:unit`.
 
 
 ## Inspiration

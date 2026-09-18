@@ -288,8 +288,7 @@ read -r -d '' application_helpers <<'JS' || true
     .map(element => ({from: test.leaf.view.editor.cm.posAtDOM(element),
       to: test.leaf.view.editor.cm.posAtDOM(element, element.childNodes.length), text: element.textContent,
       severity: ['error', 'warning', 'info'].find(level => element.classList.contains('gremlins-severity-' + level)),
-      zeroWidth: element.classList.contains('gremlins-zero-width'),
-      warning: element.classList.contains('gremlins-severity-warning')}));
+      zeroWidth: element.classList.contains('gremlins-zero-width')}));
   return true;
 })()
 JS
@@ -307,7 +306,6 @@ source tests/e2e/gremlin-icon.sh
 source tests/e2e/fix.sh
 source tests/e2e/detect.sh
 source tests/e2e/editor-tooltip.sh
-source tests/e2e/ambiguous-empty-list-marker.sh
 errors=$(obsidian_command dev:errors)
 assert_equal 'No errors captured.' "$errors" 'Obsidian captured application errors'
 console_errors=$(obsidian_command dev:console level=error)
