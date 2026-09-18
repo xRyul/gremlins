@@ -65,6 +65,9 @@ export interface ListItem {
 export interface ListItemEndingLineContext {
   context: MarkdownListContext;
   listDepth: number | null;
+  displayMath?: 'start' | 'end' | 'single-line';
+  quoteDepth?: number;
+  inlineContent?: boolean;
 }
 
 export interface ListItemEndingDetectionOptions {
@@ -90,6 +93,8 @@ function parseListGroups(
 ) {
   const groups: ListGroup[] = [];
   let activeItems: ListItem[] = [];
+  let mathOwner: ListItem | undefined;
+  let previousWasLiteral = false;
   const literalLines = markdownLiteralLines(lines);
   const indentSize = normalizeIndentSize(options.indentSize);
 
@@ -104,8 +109,26 @@ function parseListGroups(
       : undefined;
     const context = lineContext?.context;
     const syntaxDepth = lineContext?.listDepth ?? null;
+    const quoteDepth = lineContext?.quoteDepth ?? prefix.quoteDepth;
     const isLiteral =
-      literalLines.has(line.index) || isLiteralContext(context);
+      literalLines.has(line.index) ||
+      (isLiteralContext(context) && !lineContext?.inlineContent);
+    const followsProse = !previousWasLiteral &&
+      (lines[line.index - 1]?.text.trim().length ?? 0) > 0;
+    previousWasLiteral = isLiteral;
+
+    // Obsidian omits list-depth tokens inside display math. Retain its owning
+    // item until the parser's closing delimiter instead of falling back to prose.
+    if (mathOwner) {
+      updateSubtreeEnd(activeItems, line.index);
+      if (lineContext?.displayMath === 'end') {
+        const endpoint = endpointForContent(line, prefix.contentFrom + indentation.length);
+        mathOwner.endpoint = endpoint;
+        mathOwner.lineEndingEndpoint = endpoint;
+        mathOwner = undefined;
+      }
+      continue;
+    }
 
     if (isLiteral) {
       if (prefix.content.trim().length === 0) {
@@ -113,7 +136,7 @@ function parseListGroups(
       }
       const ownerIndex = findOwningItem(
         activeItems,
-        prefix.quoteDepth,
+        quoteDepth,
         width,
         context,
         syntaxDepth,
@@ -122,6 +145,13 @@ function parseListGroups(
         activeItems = [];
       } else {
         activeItems = activeItems.slice(0, ownerIndex + 1);
+        const owner = activeItems[ownerIndex];
+        if (owner && lineContext?.displayMath) {
+          const endpoint = endpointForContent(line, prefix.contentFrom + indentation.length);
+          owner.endpoint = endpoint;
+          owner.lineEndingEndpoint = endpoint;
+          if (lineContext.displayMath === 'start') mathOwner = owner;
+        }
         updateSubtreeEnd(activeItems, line.index);
       }
       continue;
@@ -197,6 +227,7 @@ function parseListGroups(
       group.items.push(item);
       updateSubtreeEnd(activeItems, line.index);
       activeItems.push(item);
+      if (lineContext?.displayMath === 'start') mathOwner = item;
       continue;
     }
 
@@ -204,13 +235,14 @@ function parseListGroups(
       continue;
     }
 
-    const ownerIndex = findOwningItem(
-      activeItems,
-      prefix.quoteDepth,
-      width,
-      context,
-      syntaxDepth,
-    );
+    // HyperMD leaves unindented lazy text unclassified and exposes quoted
+    // continuations only as quote tokens. Adjoining prose still belongs to the item.
+    const lazyContinuation = followsProse &&
+      (context === 'plain-text' || context === 'blockquote' || lineContext?.inlineContent) &&
+      activeItems[activeItems.length - 1]?.quoteDepth === quoteDepth;
+    const ownerIndex = lazyContinuation
+      ? activeItems.length - 1
+      : findOwningItem(activeItems, quoteDepth, width, context, syntaxDepth);
     if (ownerIndex < 0) {
       activeItems = [];
       continue;
@@ -228,6 +260,7 @@ function parseListGroups(
       owner.endpoint = endpoint;
       owner.lineEndingEndpoint = endpoint;
     }
+    if (lineContext?.displayMath === 'start') mathOwner = owner;
     updateSubtreeEnd(activeItems, line.index);
   }
 
@@ -256,6 +289,7 @@ function findOwningItem(
   if (
     context !== undefined &&
     context !== 'list-continuation' &&
+    !isLiteralContext(context) &&
     context !== 'parserless' &&
     context !== 'unknown'
   ) {
@@ -479,6 +513,7 @@ function sourceLines(text: string): SourceLine[] {
 function isListContextAccepted(context: MarkdownListContext | undefined) {
   return (
     context === undefined ||
+    context === 'blockquote' ||
     context === 'nested-list-item' ||
     context === 'parserless' ||
     context === 'root-list-item' ||

@@ -112,6 +112,131 @@ read -r -d '' detection_cases <<'JS' || true
       {name: 'semantic endings exempt from ' + kind, file: 'semantic-endings.md', kind,
         settings: {listItemPunctuationPolicy: 'none', listItemLineEndingPolicy: 'two-spaces'}, marks: []},
     ]),
+    ...[
+      {policy: 'period', marks: [{line: 0, ch: 6, text: 't'}, {line: 1, ch: 8, text: ';'}]},
+      {policy: 'semicolon', marks: [{line: 0, ch: 6, text: 't'}, {line: 2, ch: 7, text: '.'}]},
+      {policy: 'none', marks: [{line: 1, ch: 8, text: ';'}, {line: 2, ch: 7, text: '.'}]},
+    ].map(({policy, marks}) => ({
+      name: 'explicit punctuation policy: ' + policy, file: 'punctuation-mixed.md', kind: 'list-item-punctuation',
+      settings: {listItemPunctuationPolicy: policy}, marks,
+    })),
+    {name: 'semicolons with a final period', file: 'punctuation-formal.md', kind: 'list-item-punctuation',
+      settings: {listItemPunctuationPolicy: 'semicolon-final-period'}, marks: [
+        {line: 0, ch: 7, text: '.', notice: 'List item punctuation · Expected a semicolon (;) at the end of this item · Warning'},
+        {line: 1, ch: 7, text: 'd'},
+        {line: 2, ch: 7, text: ';', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+      ]},
+    ...['list-item-punctuation', 'list-item-line-ending'].map(kind => ({
+      name: kind + ' disabled in application defaults', file: 'list-endings.md', kind, marks: [],
+    })),
+    // Punctuation expectations come from the actual editor and inspection command.
+    ...[
+      {name: 'infer punctuation independently for each list', file: 'punctuation-inference.md', policy: 'consistent', marks: [
+        {line: 1, ch: 7, text: 'd', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+        {line: 5, ch: 8, text: 'd', notice: 'List item punctuation · Expected a semicolon (;) at the end of this item · Warning'},
+      ]},
+      {name: 'infer a valid formal list', file: 'punctuation-inferred-formal.md', policy: 'consistent', marks: []},
+      {name: 'infer a missing formal-list semicolon', file: 'punctuation-inferred-formal-missing.md', policy: 'consistent', marks: [
+        {line: 1, ch: 7, text: 'd', notice: 'List item punctuation · Expected a semicolon (;) at the end of this item · Warning'},
+      ]},
+      {name: 'first item breaks an inference tie', file: 'list-endings.md', policy: 'consistent', marks: [
+        {line: 1, ch: 7, text: 'd', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+      ]},
+      {name: 'questions and exclamations do not drive inference', file: 'punctuation-semantic-inference.md', policy: 'consistent', marks: []},
+      ...['consistent', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
+        name: 'preserve meaningful sentence endings under ' + policy, file: 'punctuation-sentence-endings.md', policy, marks: [],
+      })),
+      {name: 'multiline display math does not drive inference', file: 'punctuation-math.md', policy: 'consistent', marks: []},
+      {name: 'empty display math needs no period', file: 'punctuation-math-empty.md', marks: []},
+      {name: 'inline display math needs no period', file: 'punctuation-math-inline.md', marks: []},
+      {name: 'nested lists infer independent punctuation', file: 'punctuation-nested.md', policy: 'consistent', marks: [
+        {line: 2, ch: 10, text: 'd', notice: 'List item punctuation · Expected a semicolon (;) at the end of this item · Warning'},
+        {line: 3, ch: 7, text: 't', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+      ]},
+      ...['period', 'consistent'].map(policy => ({
+        name: 'parent colon is structural under ' + policy, file: 'punctuation-parent-colon.md', policy, marks: [],
+      })),
+      {name: 'parent colon is structural under none', file: 'punctuation-parent-colon-none.md', policy: 'none', marks: []},
+      {name: 'parent colon preserves formal-list position', file: 'punctuation-formal-parent-colon.md', policy: 'semicolon-final-period', marks: []},
+      {name: 'leaf colon still requires punctuation', file: 'punctuation-leaf-colon.md', marks: [{line: 0, ch: 6, text: ':'}]},
+      {name: 'multiline item uses its final content line', file: 'punctuation-multiline.md', marks: [{line: 3, ch: 10, text: 's'}]},
+      {name: 'blockquote list excludes fenced examples', file: 'punctuation-quoted-fence.md', policy: 'consistent', marks: [{line: 1, ch: 9, text: 'd'}]},
+      {name: 'punctuation belongs before a block ID', file: 'punctuation-block-ids.md', marks: [{line: 1, ch: 7, text: 'd'}]},
+      {name: 'tasks, formatting and link labels', file: 'punctuation-formatting.md', marks: [{line: 3, ch: 15, text: '*'}]},
+      {name: 'standalone wikilink exempt but accompanying prose is not', file: 'punctuation-wikilinks.md', marks: [{line: 0, ch: 49, text: 'e'}]},
+      {name: 'single-token all-caps task label needs no period', file: 'punctuation-caps.md', marks: []},
+      {name: 'unpunctuated parents introducing children need no period', file: 'punctuation-label-parents.md', marks: [{line: 1, ch: 28, text: '*'}]},
+      {name: 'highlight the whole final astral code point', file: 'punctuation-astral.md', marks: [{line: 0, ch: 2, text: '👾'}]},
+      ...['consistent', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
+        name: 'multiline formula is exempt under ' + policy, file: 'punctuation-math-only.md', policy, marks: [],
+      })),
+      {name: 'prose after a formula still needs punctuation', file: 'punctuation-math-prose.md', marks: [{line: 4, ch: 7, text: 't'}]},
+      {name: 'nested formula preserves sibling inference', file: 'punctuation-math-nested.md', policy: 'consistent', marks: [{line: 6, ch: 9, text: 't'}]},
+      {name: 'formula retains its formal-list position', file: 'punctuation-math-formal.md', policy: 'semicolon-final-period', marks: []},
+      {name: 'frontmatter list shapes are literal', file: 'punctuation-frontmatter.md', marks: [{line: 5, ch: 7, text: 'l'}]},
+      {name: 'indented code list shapes are literal', file: 'indented-code.md', marks: []},
+      {name: 'bare wikilink target is not terminal punctuation', file: 'punctuation-bare-wikilink.md', policy: 'semicolon', marks: [{line: 0, ch: 10, text: ']'}]},
+      {name: 'balanced link destination preserves a punctuated label', file: 'punctuation-balanced-link.md', marks: []},
+      {name: 'punctuation is located inside a balanced link label', file: 'punctuation-balanced-link.md', policy: 'semicolon', marks: [{line: 0, ch: 8, text: '.'}]},
+      {name: 'highlight a complete terminal punctuation run', file: 'punctuation-run.md', policy: 'none', marks: [{line: 0, ch: 14, text: '.;'}]},
+      {name: 'different marker styles infer independently', file: 'punctuation-marker-styles.md', policy: 'consistent', marks: []},
+      {name: 'nested fence is not an item endpoint', file: 'punctuation-nested-fence.md', policy: 'consistent', marks: [
+        {line: 4, ch: 7, text: 'd', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+      ]},
+      {name: 'nested comment is not an item endpoint', file: 'punctuation-nested-comment.md', policy: 'consistent', marks: [
+        {line: 4, ch: 7, text: 'd', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+      ]},
+      {name: 'root lazy continuation is the endpoint', file: 'punctuation-lazy-root.md', marks: [{line: 3, ch: 10, text: 'g'}]},
+      {name: 'nested continuation and following parent paragraph', file: 'punctuation-lazy-nested.md', marks: [{line: 4, ch: 14, text: 'g'}, {line: 5, ch: 12, text: 't'}]},
+      {name: 'blockquote lazy continuation is the endpoint', file: 'punctuation-lazy-quote.md', marks: [{line: 2, ch: 9, text: 'd'}]},
+      {name: 'inline-code continuation is an item endpoint', file: 'punctuation-code-continuation.md', marks: [{line: 1, ch: 14, text: '`'}]},
+      {name: 'do not remove punctuation inside inline code', file: 'punctuation-inline-code.md', policy: 'none', marks: []},
+      ...['period', 'semicolon'].map(policy => ({
+        name: 'require punctuation outside inline code under ' + policy, file: 'punctuation-inline-code.md', policy, marks: [{line: 0, ch: 15, text: '`'}],
+      })),
+      ...['none', 'period'].map(policy => ({
+        name: 'escaped terminal punctuation under ' + policy, file: 'punctuation-escaped.md', policy, marks: [{line: 0, ch: 8, text: '\\;'}],
+      })),
+      // A standalone quoted ordered item is valid Markdown, unlike the fabricated rejection in the old test.
+      {name: 'ordered list inside a blockquote', file: 'punctuation-ordered-quote.md', marks: [{line: 0, ch: 16, text: 'n'}]},
+      {name: 'root literal block separates list groups', file: 'punctuation-root-fence.md', policy: 'consistent', marks: []},
+    ].map(({policy = 'period', ...scenario}) => ({
+      ...scenario, kind: 'list-item-punctuation', settings: {listItemPunctuationPolicy: policy},
+    })),
+    ...[
+      {name: 'remove list whitespace but preserve separate prose', file: 'line-endings-whitespace.md', policy: 'no-trailing-whitespace', marks: [
+        {line: 0, ch: 7, text: '  ', notice: 'List item line ending · Expected no trailing whitespace · Warning'}, {line: 1, ch: 8, text: '\t'},
+      ]},
+      {name: 'require exactly two hard-break spaces', file: 'line-endings-hard-break.md', policy: 'two-spaces', marks: [
+        {line: 0, ch: 5, text: 'e', notice: 'List item line ending · Expected exactly two trailing spaces (Markdown hard break) · Warning'},
+        {line: 1, ch: 5, text: ' '}, {line: 3, ch: 7, text: '   '},
+      ]},
+      {name: 'block IDs must remain at the physical end of the line', file: 'line-endings-block-ids.md', policy: 'two-spaces', marks: [{line: 1, ch: 10, text: 'd'}]},
+      {name: 'blank separators only between adjacent siblings', file: 'line-endings-siblings.md', policy: 'blank-line', marks: [
+        {line: 0, ch: 6, text: 't', notice: 'List item line ending · Expected a blank line before the next sibling item · Warning'},
+      ]},
+      {name: 'parent separator follows the whole subtree', file: 'line-endings-subtree.md', policy: 'blank-line', marks: [{line: 1, ch: 10, text: 'd'}]},
+      {name: 'separator stays inside a blockquote', file: 'line-endings-quote.md', policy: 'blank-line', marks: [{line: 0, ch: 8, text: 't'}]},
+      {name: 'separator follows a quoted lazy continuation', file: 'punctuation-lazy-quote.md', policy: 'blank-line', marks: [{line: 1, ch: 14, text: '.'}]},
+      {name: 'different marker styles need no separator', file: 'punctuation-marker-styles.md', policy: 'blank-line', marks: []},
+      {name: 'remove empty-checkbox trailing whitespace', file: 'line-endings-empty-spaces.md', policy: 'no-trailing-whitespace', marks: [{line: 0, ch: 5, text: '   '}]},
+      {name: 'empty checkbox can receive a hard break', file: 'line-endings-empty-task.md', policy: 'two-spaces', marks: [{line: 0, ch: 4, text: ']'}]},
+      {name: 'multiline formula needs no hard break', file: 'punctuation-math-only.md', policy: 'two-spaces', marks: []},
+    ].map(({policy, ...scenario}) => ({
+      ...scenario, kind: 'list-item-line-ending', settings: {listItemLineEndingPolicy: policy},
+    })),
+    ...['no-trailing-whitespace', 'two-spaces'].flatMap(policy => ['list-item-punctuation', 'list-item-line-ending'].map(kind => ({
+      name: 'Unicode trailing spaces with ' + policy + ': ' + kind, file: 'line-endings-unicode.md', kind,
+      settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: policy},
+      marks: ['\u00a0', '\u2007', '\u202f'].map((space, line) => ({line, ch: kind === 'list-item-punctuation' ? 5 : 6, text: kind === 'list-item-punctuation' ? 'm' : space})),
+    }))),
+    ...[
+      {file: 'punctuation-lazy-code.md', ch: 12, text: '`'},
+      {file: 'punctuation-lazy-emphasis.md', ch: 14, text: '*'},
+    ].map(({file, ch, text}) => ({
+      name: 'unindented formatted continuation in ' + file, file, kind: 'list-item-punctuation',
+      settings: {listItemPunctuationPolicy: 'period'}, marks: [{line: 1, ch, text}],
+    })),
   ];
   test.runDetectionCase = async (index, mode) => {
     const scenario = test.detectionCases[index];
@@ -128,6 +253,9 @@ read -r -d '' detection_cases <<'JS' || true
         return {from, to: from + mark.text.length, text: mark.text,
           severity: mark.severity ?? 'warning', zeroWidth: mark.zeroWidth ?? false};
       });
+      // Live Preview replaces inactive Markdown delimiters with rendered content.
+      // Enter the highlighted source range so delimiter-based warnings are inspectable.
+      if (expected[0]) editor.setCursor(editor.offsetToPos(expected[0].from));
       const highlights = () => {
         const ranges = [];
         for (const {from, to, text, severity, zeroWidth} of test.highlights(scenario.kind)) {

@@ -1,1 +1,2 @@
-*.md text eol=lf
+# Trailing spaces and tabs are meaningful test inputs.
+*.md text eol=lf whitespace=-blank-at-eol

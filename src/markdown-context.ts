@@ -1,7 +1,10 @@
 import { syntaxTree, syntaxTreeAvailable } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 
-import { detectListItemEndingGremlins } from './list-item-endings.ts';
+import {
+  detectListItemEndingGremlins,
+  type ListItemEndingLineContext,
+} from './list-item-endings.ts';
 import type { GremlinsSettings } from './settings-model.ts';
 
 import type { MarkdownListContext } from './types.ts';
@@ -65,9 +68,34 @@ export function getMarkdownListLineContext(
     state,
     Math.min(lineFrom + lineText.length, state.doc.length),
   );
+  let displayMath: ListItemEndingLineContext['displayMath'];
+  if (treeAvailable && lineText.includes('$$')) {
+    tree.iterate({
+      from: lineFrom,
+      to: lineFrom + lineText.length,
+      enter(node) {
+        if (node.to - node.from !== 2 || state.sliceDoc(node.from, node.to) !== '$$') return;
+        if (node.name.includes('formatting-math-begin')) displayMath = 'start';
+        if (node.name.includes('formatting-math-end')) {
+          displayMath = displayMath === 'start' ? 'single-line' : 'end';
+        }
+      },
+    });
+  }
+  const quoteLine = nodeNames.find((name) => /HyperMD-quote-\d+/.test(name));
   return {
     context: classifyMarkdownListSyntax(nodeNames, treeAvailable),
     listDepth: treeAvailable ? markdownListDepth(nodeNames) : null,
+    displayMath,
+    quoteDepth: treeAvailable && quoteLine
+      ? Number(/HyperMD-quote-(\d+)/.exec(quoteLine)?.[1])
+      : undefined,
+    // Unindented inline code/emphasis may have no list token on a lazy line.
+    // Do not promote headings or other block syntax containing inline formatting.
+    inlineContent: treeAvailable &&
+      nodeNames.some((name) => /(?:^|_)(?:inline-code|em|strong)(?:_|$)/.test(name)) &&
+      !nodeNames.some((name) => name.startsWith('HyperMD-') ||
+        BLOCK_LITERAL_NODE.test(name) || INDENTED_CODE_NODE.test(name)),
   };
 }
 

@@ -170,6 +170,132 @@ read -r -d '' fix_cases <<'JS' || true
       settings: {showListIndentation: true, enableClickToFix: false}, steps: [
         {line: 1, marks: {'list-indentation': '\t'}},
       ], remaining: {'list-indentation': [1, 2, 3]}},
+    ...[
+      {policy: 'period', steps: [
+        {line: 0, marks: {'list-item-punctuation': 't'}, fixed: {0: '- First.'}},
+        {line: 1, marks: {'list-item-punctuation': ';'}, fixed: {1: '- Second.'}},
+      ]},
+      {policy: 'semicolon', steps: [
+        {line: 0, marks: {'list-item-punctuation': 't'}, fixed: {0: '- First;'}},
+        {line: 2, marks: {'list-item-punctuation': '.'}, fixed: {2: '- Third;'}},
+      ]},
+      {policy: 'none', steps: [
+        {line: 1, marks: {'list-item-punctuation': ';'}, fixed: {1: '- Second'}},
+        {line: 2, marks: {'list-item-punctuation': '.'}, fixed: {2: '- Third'}},
+      ]},
+    ].map(({policy, steps}) => ({
+      name: 'apply explicit punctuation policy: ' + policy, file: 'punctuation-mixed.md',
+      settings: {listItemPunctuationPolicy: policy}, steps,
+    })),
+    {name: 'apply semicolons with a final period', file: 'punctuation-formal.md',
+      settings: {listItemPunctuationPolicy: 'semicolon-final-period'}, steps: [
+        {line: 0, marks: {'list-item-punctuation': '.'}, fixed: {0: '- First;'}},
+        {line: 1, marks: {'list-item-punctuation': 'd'}, fixed: {1: '- Second;'}},
+        {line: 2, marks: {'list-item-punctuation': ';'}, fixed: {2: '- Third.'}},
+      ]},
+    // List-item punctuation edits: full documents and saved bytes, not helper return values.
+    ...[
+      {name: 'punctuate only the final multiline content', file: 'punctuation-multiline.md', steps: [
+        {line: 3, marks: {'list-item-punctuation': 's'}, fixed: {3: '  continues.'}},
+      ]},
+      {name: 'insert punctuation before an Obsidian block ID', file: 'punctuation-block-ids.md', steps: [
+        {line: 1, marks: {'list-item-punctuation': 'd'}, fixed: {1: '- Second. ^second'}},
+      ]},
+      {name: 'preserve task syntax, formatted text and link labels', file: 'punctuation-formatting.md', steps: [
+        {line: 3, ch: 15, marks: {'list-item-punctuation': '*'}, fixed: {3: '- [ ] **Fourth**.'}},
+      ]},
+      {name: 'punctuate wikilink prose but leave the standalone link intact', file: 'punctuation-wikilinks.md', steps: [
+        {line: 0, marks: {'list-item-punctuation': 'e'}, fixed: {0: '- [[Project]] - Date when Project was handed to me.'}},
+      ]},
+      {name: 'preserve a complete astral code point', file: 'punctuation-astral.md', steps: [
+        {line: 0, marks: {'list-item-punctuation': '👾'}, fixed: {0: '- 👾.'}},
+      ]},
+      {name: 'preserve the bare wikilink target', file: 'punctuation-bare-wikilink.md', policy: 'semicolon', steps: [
+        {line: 0, ch: 10, marks: {'list-item-punctuation': ']'}, fixed: {0: '- [[Note.]];'}},
+      ]},
+      {name: 'change link label without damaging balanced destination parentheses', file: 'punctuation-balanced-link.md', policy: 'semicolon', steps: [
+        {line: 0, ch: 8, marks: {'list-item-punctuation': '.'}, fixed: {0: '- [Label;](https://example.com/Foo_(bar))'}},
+      ]},
+      {name: 'remove a whole terminal punctuation run', file: 'punctuation-run.md', policy: 'none', steps: [
+        {line: 0, marks: {'list-item-punctuation': '.;'}, fixed: {0: '- This is done'}},
+      ]},
+      {name: 'punctuate an inline-code continuation outside the code', file: 'punctuation-code-continuation.md', steps: [
+        {line: 1, ch: 14, marks: {'list-item-punctuation': '`'}, fixed: {1: '  `final value`.'}},
+      ]},
+      ...[{policy: 'period', punctuation: '.'}, {policy: 'semicolon', punctuation: ';'}].map(({policy, punctuation}) => ({
+        name: 'append ' + policy + ' without editing inline code', file: 'punctuation-inline-code.md', policy, steps: [
+          {line: 0, ch: 15, marks: {'list-item-punctuation': '`'}, fixed: {0: '- Run `command.`' + punctuation}},
+        ],
+      })),
+      {name: 'inline-code punctuation remains untouched under none', file: 'punctuation-inline-code.md', policy: 'none', noFix: true, steps: [
+        {line: 0, marks: {'list-item-punctuation': ''}},
+      ]},
+      ...[{policy: 'none', punctuation: ''}, {policy: 'period', punctuation: '.'}].map(({policy, punctuation}) => ({
+        name: 'remove punctuation escape under ' + policy, file: 'punctuation-escaped.md', policy, steps: [
+          {line: 0, marks: {'list-item-punctuation': '\\;'}, fixed: {0: '- Really' + punctuation}},
+        ],
+      })),
+      {name: 'punctuate prose after math without changing the formula', file: 'punctuation-math-prose.md', steps: [
+        {line: 4, marks: {'list-item-punctuation': 't'}, fixed: {4: '  Result.'}},
+      ]},
+    ].map(({policy = 'period', ...scenario}) => ({
+      ...scenario, settings: {listItemPunctuationPolicy: policy},
+    })),
+    ...['consistent', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
+      name: 'formula is never punctuated under ' + policy, file: 'punctuation-math-only.md', noFix: true,
+      settings: {listItemPunctuationPolicy: policy, listItemLineEndingPolicy: 'two-spaces'},
+      steps: [0, 1, 2, 3].map(line => ({line, marks: {'list-item-punctuation': '', 'list-item-line-ending': ''}})),
+    })),
+    ...[
+      {name: 'remove trailing list whitespace, not prose whitespace', file: 'line-endings-whitespace.md', policy: 'no-trailing-whitespace', steps: [
+        {line: 0, marks: {'list-item-line-ending': '  '}, fixed: {0: '- First'}},
+        {line: 1, marks: {'list-item-line-ending': '\t'}, fixed: {1: '- Second'}},
+      ]},
+      {name: 'normalize every invalid hard break to two spaces', file: 'line-endings-hard-break.md', policy: 'two-spaces', steps: [
+        {line: 0, marks: {'list-item-line-ending': 'e'}, fixed: {0: '- None  '}},
+        {line: 1, marks: {'list-item-line-ending': ' '}, fixed: {1: '- One  '}},
+        {line: 3, marks: {'list-item-line-ending': '   '}, fixed: {3: '- Three  '}},
+      ]},
+      {name: 'hard-break fix never appends spaces to a block ID', file: 'line-endings-block-ids.md', policy: 'two-spaces', steps: [
+        {line: 1, marks: {'list-item-line-ending': 'd'}, fixed: {1: '    - Child  '}},
+      ]},
+      {name: 'insert only the missing sibling separator', file: 'line-endings-siblings.md', policy: 'blank-line', steps: [
+        {line: 0, marks: {'list-item-line-ending': 't'}, fixed: {0: '- First\n'}},
+      ]},
+      {name: 'insert parent separator after the nested subtree', file: 'line-endings-subtree.md', policy: 'blank-line', steps: [
+        {line: 1, marks: {'list-item-line-ending': 'd'}, fixed: {1: '    - Child\n'}},
+      ]},
+      {name: 'insert a quoted blank separator', file: 'line-endings-quote.md', policy: 'blank-line', steps: [
+        {line: 0, marks: {'list-item-line-ending': 't'}, fixed: {0: '> - First\n>'}},
+      ]},
+      {name: 'separator after lazy quoted text retains the quote prefix', file: 'punctuation-lazy-quote.md', policy: 'blank-line', steps: [
+        {line: 1, marks: {'list-item-line-ending': '.'}, fixed: {1: '  continuation.\n>'}},
+      ]},
+      {name: 'remove whitespace without deleting an empty checkbox', file: 'line-endings-empty-spaces.md', policy: 'no-trailing-whitespace', steps: [
+        {line: 0, marks: {'list-item-line-ending': '   '}, fixed: {0: '- [ ]'}},
+      ]},
+      {name: 'add a hard break after an empty checkbox', file: 'line-endings-empty-task.md', policy: 'two-spaces', steps: [
+        {line: 0, ch: 4, marks: {'list-item-line-ending': ']'}, fixed: {0: '- [ ]  '}},
+      ]},
+    ].map(({policy, ...scenario}) => ({
+      ...scenario, settings: {listItemLineEndingPolicy: policy},
+    })),
+    ...['no-trailing-whitespace', 'two-spaces'].map(policy => ({
+      name: 'compose punctuation, Unicode space and ' + policy + ' fixes', file: 'line-endings-unicode.md',
+      settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: policy},
+      steps: ['\u00a0', '\u2007', '\u202f'].map((space, line) => ({line,
+        marks: {character: space, 'list-item-punctuation': 'm', 'list-item-line-ending': space},
+        fixed: {[line]: '- Item.' + (policy === 'two-spaces' ? '  ' : '')},
+      })),
+    })),
+    ...[
+      {file: 'punctuation-lazy-code.md', ch: 12, text: '`', fixed: '`final value`.'},
+      {file: 'punctuation-lazy-emphasis.md', ch: 14, text: '*', fixed: '**final value**.'},
+    ].map(({file, ch, text, fixed}) => ({
+      name: 'punctuate the unindented formatted endpoint in ' + file, file,
+      settings: {listItemPunctuationPolicy: 'period'},
+      steps: [{line: 1, ch, marks: {'list-item-punctuation': text}, fixed: {1: fixed}}],
+    })),
   ];
   test.assert(test.fixtures['fix-unknown-character.md'] === 'Before\n👾\nAfter\n', 'Unknown-character fixture changed');
   test.assert(test.defaults.enableClickToFix === false, 'Fixing must remain disabled in application defaults');
@@ -193,7 +319,8 @@ read -r -d '' fix_cases <<'JS' || true
       };
       test.assert(editor.getValue() === original, 'Highlighting must not automatically change the note');
       for (const step of scenario.steps) {
-        editor.setCursor({line: step.line, ch: editor.getLine(step.line).length});
+        // Enter hidden formatting delimiters when a Live Preview scenario needs them.
+        editor.setCursor({line: step.line, ch: step.ch ?? editor.getLine(step.line).length});
         for (const [kind, text] of Object.entries(step.marks)) {
           await test.waitFor(() => test.highlights(kind)
             .filter(mark => editor.offsetToPos(mark.from).line === step.line)

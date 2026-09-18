@@ -1,0 +1,9 @@
+- Is this ready?
+- This is urgent!
+- Is this surprising?!
+- "Is this quoted?"
+- Waiting...
+- Waiting…
+- مكتمل؟
+- 完了。
+- Really\?

@@ -1,0 +1,4 @@
+- [ ] **First.**
+- [x] [Second.](https://example.com)
+- [[Third|Third.]]
+- [ ] **Fourth**

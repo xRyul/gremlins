@@ -1,0 +1,6 @@
+---
+aliases:
+  - First.
+  - Second
+---
+- Actual
