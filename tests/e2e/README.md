@@ -49,6 +49,10 @@ The old synthetic first-line ambiguous match had no preceding list item. `fix-or
 
 A blank-line boundary must leave the second block's text untouched. After the first block is dedented, Obsidian can parse that untouched second block as a valid child list, so the test does not invent a remaining orphan warning.
 
+`gremlin-icon.sh` replaces both checks in `tests/gremlin-icon.test.ts` with 12 live executions: error/warning/info icons, passive/interactive gutters, and both editor modes. It reuses the Unicode and typographic fixtures and inspects the actual SVG inserted by Obsidian, excluding CodeMirror's invisible spacer.
+
+Assertions recognize the custom mascot rather than a blank or built-in icon, check its 12–16 px size and viewBox fit, and retain the lightweight geometry limits (at most four paths, SVG body below 1 KB, no gradients/filters). Computed fill/stroke colours must follow the severity token, including when that token changes locally on the marker. The local style is restored without changing the vault theme. This replaces the literal source-transform check with rendered geometry checks and the source-code registration checks with actual rendering.
+
 `editor-tooltip.sh` retains the live character/gutter tooltip and list-ending regression checks using the same fixture lifecycle.
 
 ## Failures and interrupted runs
