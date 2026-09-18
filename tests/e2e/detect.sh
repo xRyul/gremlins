@@ -12,6 +12,11 @@ read -r -d '' detection_cases <<'JS' || true
   test.assert(test.fixtures['delimited-marker.md'].split('\n')[1] === '    - ', 'Fixture lost its significant trailing space');
   test.assert(test.fixtures['tabbed-parent.md'].startsWith('\t-\tParent\n\t\t-\n'), 'Fixture tabs were reformatted');
   test.assert(test.fixtures['line-endings-no-final-newline.md'] === '- First\n- Second', 'Fixture must have no final newline');
+  test.assert(test.defaults.showDuplicateListMarkers === false && test.defaults.showListMarkerSpacing === false, 'Marker cleanup rules must be disabled in application defaults');
+  test.assert(test.fixtures['duplicate-empty-markers.md'] === '- -\n\n- -  \n', 'Empty retained-marker fixture lost its trailing spaces');
+  test.assert(test.fixtures['list-marker-setext.md'] === '-  \n\n> -  \n\nHeading\n-  \n\n> Heading\n> -  \n', 'Potential Setext underlines lost their trailing spaces');
+  test.assert(test.fixtures['list-marker-thematic-breaks.md'] === '- - -\n\n> - - -\n\n> *  *  *\n', 'Thematic-break marker spacing changed');
+  test.assert(test.fixtures['list-marker-nine-digits.md'] === '123456789.  Item\n' && test.fixtures['list-marker-ten-digits.md'] === '1234567890.  Item\n', 'Ordered-marker digit boundary changed');
   test.detectionCases = [
     // Characters: grouping, severity, source ranges, defaults and opt-in punctuation.
     {name: 'consecutive zero-width spaces', file: 'zero-width-spaces.md', kind: 'character',
@@ -95,6 +100,48 @@ read -r -d '' detection_cases <<'JS' || true
       settings: defaults ? {} : {showAmbiguousEmptyListMarkers: true},
       marks: ch === undefined ? [] : [{line, ch, text: '-'}],
     })),
+
+    // Marker cleanup: real compact lists, delimiter ranges, exclusions and independent defaults.
+    {name: 'redundant first unordered marker at a multiline source offset', file: 'duplicate-markers.md', kind: 'duplicate-list-marker',
+      settings: {showDuplicateListMarkers: true}, marks: [{line: 2, ch: 0, text: '- ',
+        notice: 'Duplicate list marker · Consecutive unordered markers may create an unintended nested list · Warning'}]},
+    {name: 'nested plus/star markers inside a blockquote', file: 'duplicate-quoted-markers.md', kind: 'duplicate-list-marker',
+      settings: {showDuplicateListMarkers: true}, marks: [{line: 1, ch: 4, text: '+ '}]},
+    {name: 'extra spaces after unordered and both ordered marker styles', file: 'list-marker-spacing.md', kind: 'list-marker-spacing',
+      settings: {showListMarkerSpacing: true}, marks: [
+        {line: 0, ch: 1, text: '  ', notice: 'List marker spacing · Marker is not followed by exactly one ordinary space · Warning'},
+        {line: 1, ch: 2, text: '  '}, {line: 2, ch: 2, text: '  '},
+      ]},
+    {name: 'single tab delimiters after unordered and ordered markers', file: 'list-marker-tabs.md', kind: 'list-marker-spacing',
+      settings: {showListMarkerSpacing: true}, marks: [{line: 0, ch: 1, text: '\t'}, {line: 1, ch: 2, text: '\t'}]},
+    {name: 'nine-digit ordered marker accepts delimiter cleanup', file: 'list-marker-nine-digits.md', kind: 'list-marker-spacing',
+      settings: {showListMarkerSpacing: true}, marks: [{line: 0, ch: 10, text: '  '}]},
+    {name: 'ten-digit prefix is not eligible for marker cleanup', file: 'list-marker-ten-digits.md', kind: 'list-marker-spacing',
+      settings: {showListMarkerSpacing: true}, marks: []},
+    {name: 'one ordinary marker space is already valid', file: 'list-marker-valid.md', kind: 'list-marker-spacing',
+      settings: {showListMarkerSpacing: true}, marks: []},
+    {name: 'spacing checks every marker in compact nested lists', file: 'list-marker-compact.md', kind: 'list-marker-spacing',
+      settings: {showListMarkerSpacing: true}, marks: [
+        {line: 0, ch: 3, text: '  '}, {line: 2, ch: 4, text: '  '}, {line: 4, ch: 5, text: '  '},
+        {line: 6, ch: 1, text: '  '}, {line: 6, ch: 4, text: '  '},
+      ]},
+    {name: 'combined cleanup flags only redundant unordered markers', file: 'list-marker-compact.md', kind: 'duplicate-list-marker',
+      settings: {showDuplicateListMarkers: true, showListMarkerSpacing: true}, marks: [
+        {line: 0, ch: 0, text: '- '}, {line: 4, ch: 2, text: '- '}, {line: 6, ch: 0, text: '-  '},
+      ]},
+    {name: 'combined cleanup checks retained delimiters without overlapping the removed marker', file: 'list-marker-compact.md', kind: 'list-marker-spacing',
+      settings: {showDuplicateListMarkers: true, showListMarkerSpacing: true}, marks: [
+        {line: 0, ch: 3, text: '  '}, {line: 2, ch: 4, text: '  '}, {line: 4, ch: 5, text: '  '}, {line: 6, ch: 4, text: '  '},
+      ]},
+    {name: 'duplicate cleanup preserves empty retained markers', file: 'duplicate-empty-markers.md', kind: 'duplicate-list-marker',
+      settings: {showDuplicateListMarkers: true}, marks: []},
+    ...['duplicate-list-marker', 'list-marker-spacing'].flatMap(kind => [
+      {name: kind + ' disabled in application defaults', file: 'list-marker-defaults.md', kind, marks: []},
+      ...['list-marker-literals.md', 'list-marker-thematic-breaks.md', 'list-marker-setext.md'].map(file => ({
+        name: kind + ' ignores literal, thematic or Setext syntax in ' + file, file, kind,
+        settings: {showDuplicateListMarkers: true, showListMarkerSpacing: true}, marks: [],
+      })),
+    ]),
 
     // Missing markers: pasted task lists, tab widths/marker style, and legitimate continuation text.
     {name: 'missing marker in a pasted task list', file: 'missing-list-marker.md', kind: 'missing-list-marker',

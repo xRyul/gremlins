@@ -75,6 +75,61 @@ read -r -d '' fix_cases <<'JS' || true
       settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'}, steps: [
         {line: 1, marks: {'list-item-punctuation': 'd', 'list-item-line-ending': 'd'}, fixed: {1: '- Second.  '}},
       ]},
+    // Duplicate/spacing cleanup: one user action, complete text, saved bytes and no-op exclusions.
+    {name: 'remove only the redundant marker and delimiter', file: 'duplicate-markers.md',
+      settings: {showDuplicateListMarkers: true}, steps: [
+        {line: 2, ch: 0, marks: {'duplicate-list-marker': '- '}, fixed: {2: '- Detect double bullets'}},
+      ]},
+    {name: 'remove a nested plus marker without changing its quote prefix or retained star', file: 'duplicate-quoted-markers.md',
+      settings: {showDuplicateListMarkers: true}, steps: [
+        {line: 1, ch: 4, marks: {'duplicate-list-marker': '+ '}, fixed: {1: '>   * Item'}},
+      ]},
+    {name: 'normalize unordered and both ordered space delimiters', file: 'list-marker-spacing.md',
+      settings: {showListMarkerSpacing: true}, steps: [
+        {line: 0, ch: 1, marks: {'list-marker-spacing': '  '}, fixed: {0: '- Detect space'}},
+        {line: 1, ch: 2, marks: {'list-marker-spacing': '  '}, fixed: {1: '1. Detect space'}},
+        {line: 2, ch: 2, marks: {'list-marker-spacing': '  '}, fixed: {2: '2) Detect space'}},
+      ]},
+    {name: 'normalize unordered and ordered tab delimiters', file: 'list-marker-tabs.md',
+      settings: {showListMarkerSpacing: true}, steps: [
+        {line: 0, ch: 1, marks: {'list-marker-spacing': '\t'}, fixed: {0: '- Item'}},
+        {line: 1, ch: 2, marks: {'list-marker-spacing': '\t'}, fixed: {1: '2) Detect space'}},
+      ]},
+    {name: 'normalize the nine-digit ordered marker delimiter', file: 'list-marker-nine-digits.md',
+      settings: {showListMarkerSpacing: true}, steps: [
+        {line: 0, ch: 10, marks: {'list-marker-spacing': '  '}, fixed: {0: '123456789. Item'}},
+      ]},
+    {name: 'normalize every compact-list delimiter without removing markers', file: 'list-marker-compact.md',
+      settings: {showListMarkerSpacing: true}, steps: [
+        {line: 0, ch: 3, marks: {'list-marker-spacing': '  '}, fixed: {0: '- - Item'}},
+        {line: 2, ch: 4, marks: {'list-marker-spacing': '  '}, fixed: {2: '- 1. Item'}},
+        {line: 4, ch: 5, marks: {'list-marker-spacing': '  '}, fixed: {4: '> - - Item'}},
+        {line: 6, ch: 1, marks: {'list-marker-spacing': '    '}, fixed: {6: '- - Item'}},
+      ]},
+    {name: 'remove duplicate markers and fix retained spacing in the same action', file: 'list-marker-compact.md',
+      settings: {showDuplicateListMarkers: true, showListMarkerSpacing: true}, steps: [
+        {line: 0, ch: 0, marks: {'duplicate-list-marker': '- ', 'list-marker-spacing': '  '}, fixed: {0: '- Item'}},
+        {line: 2, ch: 4, marks: {'duplicate-list-marker': '', 'list-marker-spacing': '  '}, fixed: {2: '- 1. Item'}},
+        {line: 4, ch: 2, marks: {'duplicate-list-marker': '- ', 'list-marker-spacing': '  '}, fixed: {4: '> - Item'}},
+        {line: 6, ch: 0, marks: {'duplicate-list-marker': '-  ', 'list-marker-spacing': '  '}, fixed: {6: '- Item'}},
+      ]},
+    {name: 'marker cleanup cannot edit text under application defaults', file: 'list-marker-defaults.md', noFix: true,
+      steps: [0, 2].map(line => ({line, marks: {'duplicate-list-marker': '', 'list-marker-spacing': ''}}))},
+    ...[
+      {file: 'list-marker-literals.md', lines: [1, 2]},
+      {file: 'list-marker-thematic-breaks.md', lines: [0, 2, 4]},
+      {file: 'list-marker-setext.md', lines: [0, 2, 5, 8]},
+    ].map(({file, lines}) => ({
+      name: 'marker cleanup preserves literal, thematic or Setext syntax in ' + file, file, noFix: true,
+      settings: {showDuplicateListMarkers: true, showListMarkerSpacing: true},
+      steps: lines.map(line => ({line, marks: {'duplicate-list-marker': '', 'list-marker-spacing': ''}})),
+    })),
+    {name: 'duplicate cleanup never creates a bare retained underline', file: 'duplicate-empty-markers.md', noFix: true,
+      settings: {showDuplicateListMarkers: true}, steps: [0, 2].map(line => ({line, marks: {'duplicate-list-marker': ''}}))},
+    {name: 'valid single-space delimiter needs no normalization', file: 'list-marker-valid.md', noFix: true,
+      settings: {showListMarkerSpacing: true}, steps: [{line: 0, marks: {'list-marker-spacing': ''}}]},
+    {name: 'ten-digit prefix is never normalized as a list marker', file: 'list-marker-ten-digits.md', noFix: true,
+      settings: {showListMarkerSpacing: true}, steps: [{line: 0, marks: {'list-marker-spacing': ''}}]},
     // Empty-marker edits live here; detect.sh only checks detection.
     ...[
       {file: 'parent-child.md', fixed: '    - '},

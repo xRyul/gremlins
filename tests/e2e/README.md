@@ -60,7 +60,6 @@ These are destinations for future migrations, not a claim that the remaining cov
 
 | Existing file under `tests/` | Live destination |
 |---|---|
-| `list-marker-cleanup.test.ts` | Duplicate-marker and spacing detection in `detect.sh`; removal/normalisation in `fix.sh`. |
 | `markdown-context.test.ts` | Real Markdown fixtures and their detection outcomes in `detect.sh`. |
 | `match-position.test.ts` | Cursor inspection in `detect.sh`; hover-boundary behaviour in `editor-tooltip.sh`. |
 | `presentation.test.ts` | Actual inspection notices, tooltip content or icon severity, according to the visible output being checked. |
@@ -83,12 +82,13 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 
 ## Coverage
 
-`detect.sh` is the read-only detection suite: 128 scenarios in both Source mode and Live Preview (256 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
+`detect.sh` is the read-only detection suite: 147 scenarios in both Source mode and Live Preview (294 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, list-marker-cleanup and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
 
 - Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
 - Mixed indentation, pure tabs/spaces, multiline source offsets and the disabled rule.
 - Root/orphaned lists, nested alignment at indent widths 2/4, non-list content, literal regions and defaults.
 - Ambiguous empty list markers: parent/child and sibling contexts, marker/delimiter widths, blockquotes, literal-region exclusions, defaults and tab widths 2/4/8 (21 scenarios).
+- Duplicate markers and marker spacing: unordered/ordered delimiters, tabs, compact nesting, quoted lists, digit limits, overlapping-rule suppression, defaults and literal/thematic/Setext exclusions.
 - Missing markers in pasted task lists, tabbed/star-marker contexts, and ordinary continuation text.
 - Missing list-item punctuation/hard breaks and semantic-ending exceptions, with both rules enabled together.
 - All punctuation policies, per-list/nested inference, first-item ties, formal-list endings, semantic punctuation, parent colons and display-math exemptions.
@@ -103,7 +103,7 @@ Unlike the old parserless indentation examples, `deep-list-indentation.md` and `
 
 The old tabbed empty-marker example without a root list is actually indented code in Obsidian and is retained as a negative fixture. `tabbed-nested-parent.md` adds a real root list to exercise the intended positive tab-width cases. The old parserless checks are represented by real fenced/indented-code documents, not by simulating a missing parser.
 
-`fix.sh` owns user-requested edits and no-op actions: 97 scenarios covering the user-visible behaviour from the former fixing and list-item-endings unit tests plus unique fix expectations moved out of the detection and tooltip suites. Each starts from a fresh fixture for both the fix command and gutter click, in both editor modes (388 executions). Highlights are preconditions, not a repeat of the detection suite's exact range/style assertions. Checks cover gutter interactivity, the entire document after each edit, persisted file contents, and remaining warnings.
+`fix.sh` owns user-requested edits and no-op actions: 111 scenarios covering the user-visible behaviour from the former fixing, list-marker-cleanup and list-item-endings unit tests plus unique fix expectations moved out of the detection and tooltip suites. Each starts from a fresh fixture for both the fix command and gutter click, in both editor modes (444 executions). Highlights are preconditions, not a repeat of the detection suite's exact range/style assertions. Checks cover gutter interactivity, the entire document after each edit, persisted file contents, and remaining warnings.
 
 - All 31 currently supported Unicode characters: deletion-only controls (including grouped zero-width spaces), repeated/other Unicode spaces, line/paragraph separators and all six typographic replacements. Unknown astral characters remain untouched.
 - Block dedentation from parents and deeper children, preserving nested lists, tabbed delimiters and continuation lines, and respecting blank lines and heading boundaries. Independent roots and mixed ordered/unordered code-shaped blocks are included.
@@ -111,6 +111,7 @@ The old tabbed empty-marker example without a root list is actually indented cod
 - Tab-led and space-led mixed indentation, list rounding at widths 2/4, and the disabled-fixing default.
 - No-op actions for disabled detection rules, pure indentation, non-list/literal content, aligned children and ordinary list continuation.
 - Empty-marker delimiter insertion across parent widths, blockquotes and tabs at widths 2/4/8; no-op actions for all negative/default empty-marker cases in `detect.sh`.
+- Duplicate-marker removal and space/tab normalization, separately and together in one action; retained marker styles and quote prefixes survive. Literal syntax, empty retained markers, valid delimiters, ten-digit prefixes and disabled rules remain untouched.
 - Inserting a missing period and two-space hard break together.
 - Period/semicolon/removal policies, formal-list punctuation, multiline endpoints, formatted tasks, link labels/targets, escaped punctuation, and inline-code preservation.
 - Whitespace and separator edits preserve prose, nested subtrees, blockquote prefixes, block IDs and empty checkboxes; combined Unicode-space fixes leave no overlapping warnings.
@@ -147,6 +148,31 @@ Some old inputs did not mean what their injected contexts claimed:
 - The live suite waits for a complete parse. Missing-parser and `unknown`-context detection are checked separately in `list-ending-fallback.test.ts`, using a real CodeMirror state with no language extension rather than fabricated parser classifications.
 
 These distinctions were checked against Obsidian's editor syntax tree and, for lazy ownership, its Reading view output. Fixtures preserve the behaviour under test without manufacturing parser classifications.
+
+## List-marker-cleanup migration
+
+The 16 tests formerly in `tests/list-marker-cleanup.test.ts` are covered by 19 detection scenarios and 14 fix/no-op scenarios in the existing executors (38 detection + 56 fix executions). Both editor modes run; edits and no-ops use both command and gutter actions. No detector imports, fabricated matches or parser classifications are used.
+
+| Original coverage | Live fixtures and assertions |
+|---|---|
+| First duplicate marker, match properties and source offset | `duplicate-markers.md`: exact highlighted `- ` at offsets 10–12 on line 2, warning/non-zero-width styling and inspection notice. |
+| Nested/quoted plus and star styles | `duplicate-quoted-markers.md`: highlighted `+ ` at offsets 24–26; fixing preserves `>   * Item`. |
+| Duplicate and spacing exclusions in literal Markdown | `list-marker-literals.md`: original `- - example` and `1.  example` inside a real fence; both rules stay silent and actions do nothing. |
+| Three thematic-break variants | `list-marker-thematic-breaks.md`: root dashes, quoted dashes and double-spaced quoted stars; both rules enabled, no edits. |
+| Root/quoted potential Setext underlines | `list-marker-setext.md`: two trailing spaces preserved on bare empty items and real heading underlines; no warnings or edits. |
+| Empty retained markers | `duplicate-empty-markers.md`: both `- -` and `- -  ` remain intact under duplicate cleanup. |
+| Both rules disabled by default | `list-marker-defaults.md`: original `- - Item` and `-  Item`; genuine application defaults checked, no detection or edits. |
+| Duplicate fixability and exact removal | `duplicate-markers.md`: interactive gutter and command remove only the first marker/delimiter, preserving the complete surrounding document and saved bytes. |
+| Combined duplicate removal and retained spacing | `list-marker-compact.md`: `-  -  Item` has separate non-overlapping duplicate/spacing highlights and becomes `- Item` in one action. |
+| Extra spaces after unordered, dot-ordered and parenthesis-ordered markers | `list-marker-spacing.md`: all three original `Detect space` variants, exact delimiter ranges and two-space widths. |
+| Tab delimiter versus one ordinary space | `list-marker-tabs.md` and `list-marker-valid.md`: single-tab highlights, tab-to-space fixes and valid-space no-ops. |
+| Maximum nine-digit ordered marker | `list-marker-nine-digits.md` and `list-marker-ten-digits.md`: original independent inputs, positive/negative detection and edit/no-op outcomes. |
+| Every delimiter in four compact-list forms | `list-marker-compact.md`: original unordered, ordered, quoted and double-delimiter inputs; exact highlight counts/ranges and all four spacing-only outputs. |
+| Unordered/ordered delimiter normalization and fixability | `list-marker-spacing.md` and `list-marker-tabs.md`: space/tab replacements via interactive gutters and commands, complete editor/saved results and no remaining warnings. |
+
+Significant trailing spaces, thematic-break spacing and digit-boundary inputs have explicit byte guards. Synthetic literal classifications are replaced with actual fenced Markdown; potential Setext examples additionally exercise real headings. The original nonzero source offsets are retained using real preceding text.
+
+The nine- and ten-digit examples remain separate notes, matching the original separate detector calls. Combining them into one ordered-list note caused Obsidian's native automatic numbering to rewrite the second number during an edit; a plain `editor.replaceRange()` reproduced that independently of Gremlins. The tests keep their original isolated inputs rather than accepting that unrelated edit or changing the vault's numbering settings.
 
 ## Failures and interrupted runs
 
