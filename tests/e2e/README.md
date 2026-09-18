@@ -23,28 +23,31 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 
 ## Coverage
 
-`ambiguous-empty-list-marker.sh` replaces the former Node-only test file. Its 21 scenarios run in both Source mode and Live Preview (42 executions). They verify real parser/rendering results, warning ranges, gutter fixes, persisted file contents, negative cases, defaults and tab widths 2/4/8. No detector functions or fabricated parser classifications are used.
+`ambiguous-empty-list-marker.sh` is read-only: its 21 scenarios run in both Source mode and Live Preview (42 executions). They verify real parser/rendering results, warning ranges, unchanged editor/saved contents, negative cases, defaults and tab widths 2/4/8. Empty-marker fix and no-op actions belong in `fix.sh`; the shared parent/child fix is tested there only once per mode/action. No detector functions or fabricated parser classifications are used.
 
 The old tabbed example without a root list is actually indented code in Obsidian and is retained as a negative fixture. `tabbed-nested-parent.md` adds a real root list to exercise the intended positive tab-width cases. The old parserless checks are represented by real fenced/indented-code documents, not by simulating a missing parser.
 
-`detect.sh` is the read-only detection suite: 22 scenarios in both editor modes (44 executions). It replaces the detection coverage from `tests/detect.test.ts`; quote and dash checks share one scenario:
+`detect.sh` is the read-only detection suite: 26 scenarios in both editor modes (52 executions). It covers the former `tests/detect.test.ts` checks plus list-ending regressions moved out of the tooltip suite:
 
 - Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
 - Mixed indentation, pure tabs/spaces, multiline source offsets and the disabled rule.
 - Root/orphaned lists, nested alignment at indent widths 2/4, non-list content, literal regions and defaults.
 - Missing markers in pasted task lists, tabbed/star-marker contexts, and ordinary continuation text.
+- Missing list-item punctuation/hard breaks and semantic-ending exceptions, with both rules enabled together.
 
 Checks compare actual highlighted source ranges and inspection notices, then verify that both the editor and saved note remain unchanged. This suite never invokes a fix; editing and no-op fix actions belong in `fix.sh`. Obsidian can split one indentation highlight into several DOM spans; contiguous fragments are compared as a source range, while Unicode grouping is checked separately.
 
 Unlike the old parserless indentation examples, `deep-list-indentation.md` and `list-indent-width.md` have real parent lists. Independent root markers are tested as orphaned even at four spaces or one tab; an aligned child is tested separately. `fenced-parent.md` and `tabbed-parent.md` are shared with the ambiguous-marker suite, with different rule settings and expectations.
 
-`fix.sh` owns user-requested edits and no-op actions: 36 scenarios covering the former 27 checks in `tests/fix.test.ts` plus unique fix expectations moved out of `detect.sh`. Each starts from a fresh fixture for both the fix command and gutter click, in both editor modes (144 executions). Highlights are preconditions, not a repeat of the exact range/style assertions in `detect.sh`. Checks cover gutter interactivity, the entire document after each edit, persisted file contents, and remaining warnings.
+`fix.sh` owns user-requested edits and no-op actions: 57 scenarios covering the former `tests/fix.test.ts` checks plus unique fix expectations moved out of the detection, ambiguous-marker and tooltip suites. Each starts from a fresh fixture for both the fix command and gutter click, in both editor modes (228 executions). Highlights are preconditions, not a repeat of the detection suites' exact range/style assertions. Checks cover gutter interactivity, the entire document after each edit, persisted file contents, and remaining warnings.
 
 - All 31 currently supported Unicode characters: deletion-only controls (including grouped zero-width spaces), repeated/other Unicode spaces, line/paragraph separators and all six typographic replacements. Unknown astral characters remain untouched.
 - Block dedentation from parents and deeper children, preserving nested lists, tabbed delimiters and continuation lines, and respecting blank lines and heading boundaries. Independent roots and mixed ordered/unordered code-shaped blocks are included.
 - Combined block/character and block/empty-marker fixes, missing markers (including copying a following star and tabs) and empty-marker delimiters.
 - Tab-led and space-led mixed indentation, list rounding at widths 2/4, and the disabled-fixing default.
 - No-op actions for disabled detection rules, pure indentation, non-list/literal content, aligned children and ordinary list continuation.
+- Empty-marker delimiter insertion across parent widths, blockquotes and tabs at widths 2/4/8; no-op actions for all negative/default cases from the dedicated detection suite.
+- Inserting a missing period and two-space hard break together.
 
 The old synthetic first-line ambiguous match had no preceding list item. `fix-orphaned-empty-root.md` therefore verifies only a block dedent; `fix-orphaned-empty-siblings.md` supplies real preceding/following siblings for the combined fix. The old one-space misaligned match is exercised as a real orphaned root, while larger misalignments use genuine children. Internal helper-only no-op checks are represented by real unknown-character and disabled-fixing scenarios, not injected match objects.
 
@@ -54,7 +57,7 @@ A blank-line boundary must leave the second block's text untouched. After the fi
 
 Assertions recognize the custom mascot rather than a blank or built-in icon, check its 12–16 px size and viewBox fit, and retain the lightweight geometry limits (at most four paths, SVG body below 1 KB, no gradients/filters). Computed fill/stroke colours must follow the severity token, including when that token changes locally on the marker. The local style is restored without changing the vault theme. This replaces the literal source-transform check with rendered geometry checks and the source-code registration checks with actual rendering.
 
-`editor-tooltip.sh` retains the live character/gutter tooltip and list-ending regression checks using the same fixture lifecycle.
+`editor-tooltip.sh` owns only character/gutter hover behaviour in Source mode: the intended tooltip appears without an additional Obsidian or browser-native tooltip. It uses the runner's `waitFor()` helper, retaining retries of the actual hover gesture. Exact gutter accessibility-label text belongs to `gremlin-icon.sh`; list-ending detection and fixing belong to `detect.sh` and `fix.sh`.
 
 ## Failures and interrupted runs
 

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Sourced by run.sh. Every assertion below executes inside the running Obsidian app.
+# Responsibilities: read-only empty-marker detection using Obsidian's real parser.
+# Check ranges, warning severity, defaults and tab widths; notes must stay unchanged.
+# Fix actions and no-ops belong in fix.sh. Sourced by the shared run.sh.
 read -r -d '' ambiguous_cases <<'JS' || true
 (() => {
   const test = window.__gremlinsE2E;
@@ -45,22 +47,10 @@ read -r -d '' ambiguous_cases <<'JS' || true
       if (scenario.flagged) {
         test.assert(matches[0].from === from && matches[0].text === '-' && matches[0].warning,
           'Wrong highlighted range or severity: ' + JSON.stringify(matches));
-        const marker = test.leaf.view.contentEl.querySelector('.gremlins-gutter-marker-interactive');
-        test.assert(marker, 'No interactive gutter marker');
-        marker.dispatchEvent(new MouseEvent('click', {bubbles: true}));
-        const expected = original.slice(0, from + 1) + ' ' + original.slice(from + 1);
-        await test.waitFor(() => editor.getValue() === expected && test.highlights(kind).length === 0,
-          label + ': gutter fix must insert exactly one space and clear the warning');
-        await test.leaf.view.save();
-        test.assert(await app.vault.read(test.leaf.view.file) === expected, 'Saved file differs from the fixed editor');
-      } else {
-        // The command return value means it exists, not that its editor check accepted it.
-        test.assert(app.commands.executeCommandById('gremlins:fix-current-line'), 'Fix command is not registered');
-        await test.waitFor(() => editor.getValue() === original && test.highlights(kind).length === 0,
-          label + ': negative case must remain unchanged after the fix command');
-        await test.leaf.view.save();
-        test.assert(await app.vault.read(test.leaf.view.file) === original, 'Negative fixture changed on disk');
       }
+      test.assert(editor.getValue() === original, 'Empty-marker detection must not edit the note');
+      await test.leaf.view.save();
+      test.assert(await app.vault.read(test.leaf.view.file) === original, 'Empty-marker detection must not change the saved note');
       return 'PASS: ' + label;
     } catch (error) {
       throw Error(label + ': ' + error.message + '\nActual highlights: ' + JSON.stringify(test.highlights(kind)) +

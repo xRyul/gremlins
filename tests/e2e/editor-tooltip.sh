@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
-# Sourced by run.sh; fixture lifecycle and CLI helpers are shared.
+# Responsibilities: actual character/gutter hover tooltips, without duplicate tooltips.
+# Accessible label content belongs in gremlin-icon.sh; rule detection/fixes in their suites.
+# Sourced by run.sh; fixture lifecycle, CLI transport and waiting are shared.
 
 hover() {
   local selector=$1
@@ -37,36 +37,34 @@ hover() {
 
 open_fixture 'tooltips.md' 'source' '{showTypographicCharacters: true}'
 
-for _ in {1..50}; do
-  active_path=$(obsidian_eval "app.workspace.getActiveFile()?.path ?? ''")
-  character_count=$(dom_total \
-    '.workspace-leaf.mod-active .gremlins-character')
-  if [[ $active_path == "$TEST_PATH" && $character_count == 1 ]]; then
-    break
-  fi
-  sleep 0.1
-done
-assert_equal "$TEST_PATH" "$active_path" 'Temporary test note did not become active'
-assert_equal 1 "$character_count" 'Gremlin character was not rendered'
+obsidian_eval "window.__gremlinsE2E.waitFor(() =>
+  app.workspace.getActiveFile()?.path === '$TEST_PATH' &&
+  window.__gremlinsE2E.highlights('character').length === 1,
+  'Active tooltip fixture and rendered gremlin character')" >/dev/null
 
 character_selector='.workspace-leaf.mod-active .gremlins-character'
-code_mirror_tooltips=0
+tooltip_ready=false
+# Retrying the hover gesture is separate from waiting for its rendered result.
 for attempt in {1..3}; do
   hover "$character_selector"
-  for poll in {1..20}; do
-    code_mirror_tooltips=$(dom_total \
-      '.cm-tooltip-hover:has(.gremlins-tooltip)')
-    if [[ $code_mirror_tooltips == 1 ]]; then
-      break 2
-    fi
-    sleep 0.1
-  done
+  tooltip_ready=$(obsidian_eval "(async () => {
+    const message = 'Highlighted character should show its CodeMirror tooltip';
+    try {
+      await window.__gremlinsE2E.waitFor(() =>
+        document.querySelectorAll('.cm-tooltip-hover:has(.gremlins-tooltip)').length === 1, message);
+      return true;
+    } catch (error) {
+      if (error.message !== 'Timed out: ' + message) throw error;
+      return false;
+    }
+  })()")
+  if [[ $tooltip_ready == true ]]; then break; fi
 done
 obsidian_tooltips=$(dom_total 'body > .tooltip')
 character_has_aria_label=$(obsidian_eval \
   "document.querySelector('$character_selector')?.hasAttribute('aria-label') ?? false")
 
-assert_equal 1 "$code_mirror_tooltips" \
+assert_equal true "$tooltip_ready" \
   'Highlighted character should show its CodeMirror tooltip'
 assert_equal 0 "$obsidian_tooltips" \
   'Highlighted character should not also show an Obsidian tooltip'
@@ -75,79 +73,13 @@ assert_equal false "$character_has_aria_label" \
 
 gutter_selector='.workspace-leaf.mod-active .gremlins-gutter .cm-gutterElement:not([style*="visibility: hidden"]) .gremlins-gutter-marker'
 hover "$gutter_selector"
-obsidian_tooltips=$(dom_total 'body > .tooltip')
-gutter_aria_label=$(obsidian_eval \
-  "document.querySelector('$gutter_selector')?.getAttribute('aria-label') ?? ''")
+obsidian_eval "window.__gremlinsE2E.waitFor(() =>
+  document.querySelectorAll('body > .tooltip').length === 1,
+  'Gutter icon should show its Obsidian tooltip')" >/dev/null
 gutter_has_title=$(obsidian_eval \
   "document.querySelector('$gutter_selector')?.hasAttribute('title') ?? false")
 
-assert_equal 1 "$obsidian_tooltips" \
-  'Gutter icon should show its Obsidian tooltip'
-[[ -n $gutter_aria_label ]] || fail 'Gutter icon should retain its accessible label'
 assert_equal false "$gutter_has_title" \
   'Gutter icon should not also trigger a browser-native tooltip'
 
-open_fixture 'list-endings.md' 'source' \
-  '{enableClickToFix: true, listItemPunctuationPolicy: "period", listItemLineEndingPolicy: "two-spaces"}'
-
-punctuation_selector='.workspace-leaf.mod-active [data-gremlin="list-item-punctuation"]'
-line_ending_selector='.workspace-leaf.mod-active [data-gremlin="list-item-line-ending"]'
-for _ in {1..50}; do
-  punctuation_count=$(dom_total "$punctuation_selector")
-  line_ending_count=$(dom_total "$line_ending_selector")
-  if [[ $punctuation_count == 1 && $line_ending_count == 1 ]]; then
-    break
-  fi
-  sleep 0.1
-done
-assert_equal 1 "$punctuation_count" \
-  'Missing list-item punctuation was not highlighted'
-assert_equal 1 "$line_ending_count" \
-  'Missing list-item hard break was not highlighted'
-
-fixed_list_ending=$(obsidian_eval "(() => {
-  const editor = app.workspace.getMostRecentLeaf().view.editor;
-  editor.setCursor({ line: 1, ch: 0 });
-  return app.commands.executeCommandById('gremlins:fix-current-line');
-})()")
-assert_equal true "$fixed_list_ending" \
-  'List-item ending command did not run'
-
-for _ in {1..50}; do
-  punctuation_count=$(dom_total "$punctuation_selector")
-  line_ending_count=$(dom_total "$line_ending_selector")
-  fixed_list_text=$(obsidian_eval \
-    "app.workspace.getMostRecentLeaf().view.editor.getLine(1) === '- Second.  '")
-  if [[ $punctuation_count == 0 && $line_ending_count == 0 && $fixed_list_text == true ]]; then
-    break
-  fi
-  sleep 0.1
-done
-assert_equal 0 "$punctuation_count" \
-  'List-item punctuation remained highlighted after the fix'
-assert_equal 0 "$line_ending_count" \
-  'List-item hard break remained highlighted after the fix'
-assert_equal true "$fixed_list_text" \
-  'List-item ending fix did not add a period and two trailing spaces'
-
-open_fixture 'semantic-endings.md' 'source' \
-  '{listItemPunctuationPolicy: "none", listItemLineEndingPolicy: "two-spaces"}'
-
-for _ in {1..50}; do
-  punctuation_count=$(dom_total "$punctuation_selector")
-  line_ending_count=$(dom_total "$line_ending_selector")
-  semantic_endings_ready=$(obsidian_eval \
-    "app.workspace.getMostRecentLeaf().view.editor.getValue() === window.__gremlinsE2E.fixtures['semantic-endings.md']")
-  if [[ $semantic_endings_ready == true && $punctuation_count == 0 && $line_ending_count == 0 ]]; then
-    break
-  fi
-  sleep 0.1
-done
-assert_equal true "$semantic_endings_ready" \
-  'Semantic list-ending test content was not rendered'
-assert_equal 0 "$punctuation_count" \
-  'Meaningful sentence punctuation was incorrectly highlighted'
-assert_equal 0 "$line_ending_count" \
-  'Nested-list or display-math ending was incorrectly highlighted'
-
-printf 'PASS: Obsidian tooltips and list-formatting fixes work.\n'
+printf 'PASS: Obsidian character and gutter hover tooltips work.\n'

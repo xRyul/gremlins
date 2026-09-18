@@ -71,9 +71,28 @@ read -r -d '' fix_cases <<'JS' || true
     {name: 'missing marker copies following star and tabs', file: 'tabbed-missing-list-marker.md', settings: {showMissingListMarkers: true}, steps: [
       {line: 2, marks: {'missing-list-marker': '\t'}, fixed: {2: '\t\t\t* Missing item'}},
     ]},
-    {name: 'insert only the missing empty-marker delimiter', file: 'parent-child.md', settings: {showAmbiguousEmptyListMarkers: true}, steps: [
-      {line: 1, marks: {'ambiguous-empty-list-marker': '-'}, fixed: {1: '    - '}},
-    ]},
+    {name: 'insert punctuation and a hard break together', file: 'list-endings.md',
+      settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'}, steps: [
+        {line: 1, marks: {'list-item-punctuation': 'd', 'list-item-line-ending': 'd'}, fixed: {1: '- Second.  '}},
+      ]},
+    // Empty-marker edits live here; the dedicated rule suite only checks detection.
+    ...[
+      {file: 'parent-child.md', fixed: '    - '},
+      {file: 'root-siblings.md', fixed: '- '},
+      {file: 'parent-marker-width-3.md', fixed: '   - '},
+      {file: 'parent-marker-width-8.md', fixed: '        - '},
+      {file: 'parent-delimiter-valid.md', fixed: '       - '},
+      {file: 'blockquote.md', fixed: '>     - '},
+    ].map(({file, fixed}) => ({
+      name: 'insert only the empty-marker delimiter in ' + file, file,
+      settings: {showAmbiguousEmptyListMarkers: true},
+      steps: [{line: 1, marks: {'ambiguous-empty-list-marker': '-'}, fixed: {1: fixed}}],
+    })),
+    ...[2, 4, 8].map(tabSize => ({
+      name: 'insert only the tabbed empty-marker delimiter', file: 'tabbed-nested-parent.md', tabSize,
+      settings: {showAmbiguousEmptyListMarkers: true},
+      steps: [{line: 2, marks: {'ambiguous-empty-list-marker': '-'}, fixed: {2: '\t\t- '}}],
+    })),
     {name: 'tab-led mixed indentation rounds without changing style', file: 'fix-mixed-tabs.md', steps: [
       {line: 0, marks: {'mixed-indentation': '\t '}, fixed: {0: '\t- Item'}},
       {line: 1, marks: {'mixed-indentation': '\t  '}, fixed: {1: '\t\t- Item'}},
@@ -129,6 +148,24 @@ read -r -d '' fix_cases <<'JS' || true
     ]},
     {name: 'ordinary list continuation receives no marker', file: 'list-continuation.md', noFix: true,
       settings: {showMissingListMarkers: true}, steps: [{line: 1, marks: {'missing-list-marker': ''}}]},
+    ...[
+      {file: 'parent-delimiter-too-shallow.md'},
+      ...[2, 4, 8].map(tabSize => ({file: 'tabbed-parent.md', tabSize})),
+      {file: 'setext-heading.md'},
+      {file: 'fenced-parent.md', line: 2},
+      {file: 'fenced-siblings.md', line: 2},
+      {file: 'indented-code.md'},
+      {file: 'deeper-following-item.md'},
+      {file: 'different-following-marker.md'},
+      {file: 'delimited-marker.md'},
+    ].map(({file, line = 1, tabSize = 4}) => ({
+      name: 'empty-marker fix leaves ' + file + ' untouched', file, tabSize, noFix: true,
+      settings: {showAmbiguousEmptyListMarkers: true},
+      steps: [{line, marks: {'ambiguous-empty-list-marker': ''}}],
+    })),
+    {name: 'empty-marker fixes disabled by default', file: 'parent-child.md', noFix: true, steps: [
+      {line: 1, marks: {'ambiguous-empty-list-marker': ''}},
+    ]},
     {name: 'fixing disabled leaves the entire orphaned block untouched', file: 'fix-orphaned-tabs.md', noFix: true,
       settings: {showListIndentation: true, enableClickToFix: false}, steps: [
         {line: 1, marks: {'list-indentation': '\t'}},

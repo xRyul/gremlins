@@ -73,6 +73,15 @@ read -r -d '' detection_cases <<'JS' || true
       settings: {showMissingListMarkers: true}, marks: [{line: 2, ch: 0, text: '\t'}]},
     {name: 'ordinary list continuation', file: 'list-continuation.md', kind: 'missing-list-marker',
       settings: {showMissingListMarkers: true}, marks: [], line: 1},
+
+    // List-ending detection belongs here, not in the tooltip interaction suite.
+    ...['list-item-punctuation', 'list-item-line-ending'].flatMap(kind => [
+      {name: 'missing ' + kind, file: 'list-endings.md', kind,
+        settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'},
+        marks: [{line: 1, ch: 7, text: 'd'}]},
+      {name: 'semantic endings exempt from ' + kind, file: 'semantic-endings.md', kind,
+        settings: {listItemPunctuationPolicy: 'none', listItemLineEndingPolicy: 'two-spaces'}, marks: []},
+    ]),
   ];
   test.runDetectionCase = async (index, mode) => {
     const scenario = test.detectionCases[index];
