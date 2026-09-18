@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "dev": "node esbuild.config.mjs",
-    "test": "tsx --test tests/*.test.ts",
-    "test:obsidian": "npm run test && npm run typecheck && bash tests/e2e/editor-tooltip.sh",
+    "test": "npm run test:obsidian",
+    "test:obsidian": "npm run typecheck && bash tests/e2e/run.sh",
+    "test:unit": "tsx --test tests/*.test.ts",
+    "test:cleanup": "bash tests/e2e/check-cleanup.sh",
     "typecheck": "tsc --noEmit --skipLibCheck",
-    "build": "npm run test && npm run typecheck && node esbuild.config.mjs production",
+    "build": "npm run test:unit && npm run typecheck && node esbuild.config.mjs production",
     "lint": "eslint ."
   },
   "keywords": [

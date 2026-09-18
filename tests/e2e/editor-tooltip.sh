@@ -1,71 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Runs against a live vault through the official Obsidian CLI.
-PROJECT_ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
-cd "$PROJECT_ROOT"
-VAULT=${OBSIDIAN_TEST_VAULT_NAME:-plugin-testing-vault}
-TEST_PATH="_gremlins-tooltip-e2e-$$.md"
-OBSIDIAN_CLI=${OBSIDIAN_CLI:-obsidian}
-OBSIDIAN=("$OBSIDIAN_CLI" "vault=$VAULT")
-previous_path=''
-original_settings=''
-debugger_started=false
-
-obsidian_eval() {
-  local output
-  output=$("${OBSIDIAN[@]}" eval "code=$1")
-  printf '%s' "${output#'=> '}"
-}
-
-dom_total() {
-  local output
-  output=$("${OBSIDIAN[@]}" dev:dom "selector=$1" total)
-  if [[ $output == 'No elements found.' ]]; then
-    printf '0'
-  else
-    printf '%s' "$output"
-  fi
-}
-
-cleanup() {
-  local exit_code=$?
-  trap - EXIT
-
-  "${OBSIDIAN[@]}" eval \
-    "code=app.workspace.getLeavesOfType('markdown').find((leaf) => leaf.view.file?.path === '$TEST_PATH')?.detach()" \
-    >/dev/null 2>&1 || true
-  "${OBSIDIAN[@]}" delete "path=$TEST_PATH" permanent \
-    >/dev/null 2>&1 || true
-  if [[ -n $original_settings ]]; then
-    "${OBSIDIAN[@]}" eval \
-      "code=app.plugins.plugins.gremlins.updateSettings($original_settings)" \
-      >/dev/null 2>&1 || true
-  fi
-  if [[ -n $previous_path ]]; then
-    "${OBSIDIAN[@]}" open "path=$previous_path" \
-      >/dev/null 2>&1 || true
-  fi
-  if [[ $debugger_started == true ]]; then
-    "${OBSIDIAN[@]}" dev:debug off >/dev/null 2>&1 || true
-  fi
-
-  exit "$exit_code"
-}
-trap cleanup EXIT
-
-fail() {
-  printf 'FAIL: %s\n' "$1" >&2
-  exit 1
-}
-
-assert_equal() {
-  local expected=$1
-  local actual=$2
-  local message=$3
-  [[ $actual == "$expected" ]] ||
-    fail "$message (expected $expected, got $actual)"
-}
+# Sourced by run.sh; fixture lifecycle and CLI helpers are shared.
 
 hover() {
   local selector=$1
@@ -73,13 +9,15 @@ hover() {
   local x
   local y
 
-  coordinates=$(obsidian_eval "(() => {
-    const element = Array.from(document.querySelectorAll('$selector'))
-      .find((candidate) => {
+  coordinates=$(obsidian_eval "(async () => {
+    let element;
+    await window.__gremlinsE2E.waitFor(() => {
+      element = Array.from(document.querySelectorAll('$selector')).find(candidate => {
         const bounds = candidate.getBoundingClientRect();
         return bounds.width > 0 && bounds.height > 0;
       });
-    if (!element) return '';
+      return !!element;
+    }, 'Visible hover target: $selector');
     const bounds = element.getBoundingClientRect();
     return [
       bounds.x + Math.min(2, bounds.width / 4),
@@ -89,35 +27,15 @@ hover() {
   [[ -n $coordinates ]] || fail "Could not find visible target: $selector"
   read -r x y <<<"$coordinates"
 
-  "${OBSIDIAN[@]}" dev:cdp method=Input.dispatchMouseEvent \
+  obsidian_command dev:cdp method=Input.dispatchMouseEvent \
     'params={"type":"mouseMoved","x":1,"y":1}' >/dev/null
   sleep 0.1
-  "${OBSIDIAN[@]}" dev:cdp method=Input.dispatchMouseEvent \
+  obsidian_command dev:cdp method=Input.dispatchMouseEvent \
     "params={\"type\":\"mouseMoved\",\"x\":$x,\"y\":$y}" >/dev/null
   sleep 1
 }
 
-previous_path=$(obsidian_eval "app.workspace.getActiveFile()?.path ?? ''")
-vault_path=$(obsidian_eval "app.vault.adapter.basePath")
-build_output=$(OBSIDIAN_TEST_VAULT="$vault_path" \
-  node esbuild.config.mjs production 2>&1)
-[[ $build_output == *'Copied plugin files to '* ]] ||
-  fail 'Build did not copy the current plugin into the vault under test'
-"${OBSIDIAN[@]}" plugin:reload id=gremlins >/dev/null
-original_settings=$(obsidian_eval \
-  "JSON.stringify(app.plugins.plugins.gremlins.settings)")
-# Isolate scenarios from the vault's saved rules; cleanup restores them.
-test_settings=$(node_modules/.bin/tsx --eval \
-  "import { DEFAULT_SETTINGS } from './src/settings-model.ts'; console.log(JSON.stringify({...DEFAULT_SETTINGS, showGutterIcons: true, showTypographicCharacters: true}));")
-"${OBSIDIAN[@]}" eval \
-  "code=app.plugins.plugins.gremlins.updateSettings($test_settings)" \
-  >/dev/null
-"${OBSIDIAN[@]}" create "path=$TEST_PATH" 'content=em—dash' \
-  overwrite open newtab >/dev/null
-debug_status=$("${OBSIDIAN[@]}" dev:debug on)
-if [[ $debug_status != *'already attached'* ]]; then
-  debugger_started=true
-fi
+open_fixture 'tooltips.md' 'source' '{showTypographicCharacters: true}'
 
 for _ in {1..50}; do
   active_path=$(obsidian_eval "app.workspace.getActiveFile()?.path ?? ''")
@@ -169,55 +87,8 @@ assert_equal 1 "$obsidian_tooltips" \
 assert_equal false "$gutter_has_title" \
   'Gutter icon should not also trigger a browser-native tooltip'
 
-"${OBSIDIAN[@]}" eval \
-  "code=app.plugins.plugins.gremlins.updateSettings({...app.plugins.plugins.gremlins.settings, showAmbiguousEmptyListMarkers: true, enableClickToFix: true})" \
-  >/dev/null
-"${OBSIDIAN[@]}" eval \
-  "code=app.workspace.getMostRecentLeaf().view.editor.setValue('2. **Audit trail**\\n    -\\n    - Child')" \
-  >/dev/null
-
-ambiguous_selector='.workspace-leaf.mod-active [data-gremlin="ambiguous-empty-list-marker"]'
-for _ in {1..50}; do
-  ambiguous_count=$(dom_total "$ambiguous_selector")
-  if [[ $ambiguous_count == 1 ]]; then
-    break
-  fi
-  sleep 0.1
-done
-assert_equal 1 "$ambiguous_count" \
-  'Ambiguous empty list marker was not highlighted'
-
-clicked=$(obsidian_eval "(() => {
-  const marker = document.querySelector(
-    '.workspace-leaf.mod-active .gremlins-gutter-marker-interactive',
-  );
-  if (!marker) return false;
-  marker.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 1 }));
-  return true;
-})()")
-assert_equal true "$clicked" \
-  'Ambiguous empty list marker did not provide an interactive gutter fix'
-
-for _ in {1..50}; do
-  ambiguous_count=$(dom_total "$ambiguous_selector")
-  if [[ $ambiguous_count == 0 ]]; then
-    break
-  fi
-  sleep 0.1
-done
-has_list_delimiter=$(obsidian_eval \
-  "app.workspace.getMostRecentLeaf().view.editor.getLine(1) === '    - '")
-assert_equal 0 "$ambiguous_count" \
-  'Ambiguous empty list marker remained highlighted after the fix'
-assert_equal true "$has_list_delimiter" \
-  'Gutter fix did not add the missing list-marker delimiter'
-
-"${OBSIDIAN[@]}" eval \
-  "code=app.plugins.plugins.gremlins.updateSettings({...app.plugins.plugins.gremlins.settings, showAmbiguousEmptyListMarkers: false, listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'})" \
-  >/dev/null
-"${OBSIDIAN[@]}" eval \
-  "code=app.workspace.getMostRecentLeaf().view.editor.setValue('- First.  \\n- Second')" \
-  >/dev/null
+open_fixture 'list-endings.md' 'source' \
+  '{enableClickToFix: true, listItemPunctuationPolicy: "period", listItemLineEndingPolicy: "two-spaces"}'
 
 punctuation_selector='.workspace-leaf.mod-active [data-gremlin="list-item-punctuation"]'
 line_ending_selector='.workspace-leaf.mod-active [data-gremlin="list-item-line-ending"]'
@@ -237,8 +108,7 @@ assert_equal 1 "$line_ending_count" \
 fixed_list_ending=$(obsidian_eval "(() => {
   const editor = app.workspace.getMostRecentLeaf().view.editor;
   editor.setCursor({ line: 1, ch: 0 });
-  app.commands.executeCommandById('gremlins:fix-current-line');
-  return true;
+  return app.commands.executeCommandById('gremlins:fix-current-line');
 })()")
 assert_equal true "$fixed_list_ending" \
   'List-item ending command did not run'
@@ -260,18 +130,14 @@ assert_equal 0 "$line_ending_count" \
 assert_equal true "$fixed_list_text" \
   'List-item ending fix did not add a period and two trailing spaces'
 
-"${OBSIDIAN[@]}" eval \
-  "code=app.plugins.plugins.gremlins.updateSettings({...app.plugins.plugins.gremlins.settings, listItemPunctuationPolicy: 'none', listItemLineEndingPolicy: 'two-spaces'})" \
-  >/dev/null
-"${OBSIDIAN[@]}" eval \
-  "code=app.workspace.getMostRecentLeaf().view.editor.setValue(['1. **Report/version history**?', '    - Previous versions remain available!  ', '    - Are historical reports available?  ', '2. **Audit trail**  ', '    - \$\$Supports traceability and internal audit\$\$'].join('\\n'))" \
-  >/dev/null
+open_fixture 'semantic-endings.md' 'source' \
+  '{listItemPunctuationPolicy: "none", listItemLineEndingPolicy: "two-spaces"}'
 
 for _ in {1..50}; do
   punctuation_count=$(dom_total "$punctuation_selector")
   line_ending_count=$(dom_total "$line_ending_selector")
   semantic_endings_ready=$(obsidian_eval \
-    "(() => { const editor = app.workspace.getMostRecentLeaf().view.editor; return editor.lineCount() === 5 && editor.getLine(4) === '    - \$\$Supports traceability and internal audit\$\$'; })()")
+    "app.workspace.getMostRecentLeaf().view.editor.getValue() === window.__gremlinsE2E.fixtures['semantic-endings.md']")
   if [[ $semantic_endings_ready == true && $punctuation_count == 0 && $line_ending_count == 0 ]]; then
     break
   fi

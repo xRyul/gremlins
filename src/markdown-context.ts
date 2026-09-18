@@ -98,7 +98,10 @@ export function classifyMarkdownListSyntax(
     return level === 1 ? 'root-list-item' : 'nested-list-item';
   }
 
-  if (nodeNames.some((name) => LIST_LINE_LEVEL_NODE.test(name))) {
+  // Tabbed continuation lines can expose only a bare list token in Obsidian.
+  if (nodeNames.some((name) =>
+    LIST_LINE_LEVEL_NODE.test(name) || /^list-\d+$/.test(name),
+  )) {
     return 'list-continuation';
   }
 

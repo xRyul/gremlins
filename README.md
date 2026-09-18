@@ -119,6 +119,13 @@ The plugin does **not automatically replace anything**:
 - Without it, Gremlins only highlights and explains characters or list-formatting inconsistencies.
 
 
+## Testing
+
+`npm test` builds and tests Gremlins inside the running `plugin-testing-vault` through the official Obsidian CLI. Markdown fixtures are copied into `_gremlins_e2e/`, reset between scenarios, and removed after success or failure. Settings and the active tab are restored.
+
+See [the live testing guide](tests/e2e/README.md) for setup, coverage, cleanup verification and failure diagnostics. Remaining Node-only checks are available separately with `npm run test:unit`.
+
+
 ## Inspiration
 
 This plugin is independently implemented for Obsidian and inspired by [Gremlins tracker for Visual Studio Code](https://github.com/nhoizey/vscode-gremlins), released under the MIT License by Nicolas Hoizey.
