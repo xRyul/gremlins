@@ -1,0 +1,3 @@
+Common issues:
+	- Item —
+	- Next
