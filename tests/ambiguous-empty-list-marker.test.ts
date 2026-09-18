@@ -110,6 +110,21 @@ describe('ambiguous empty list markers', () => {
     );
   });
 
+  it('measures tabbed parent delimiters from the full parent prefix', () => {
+    for (const indentSize of [2, 4, 8]) {
+      const indentation = '\t\t';
+      assert.equal(
+        detectCase({
+          indentSize,
+          next: `${indentation}- Child`,
+          previous: '\t-\tParent',
+          text: `${indentation}-`,
+        })[0]?.kind,
+        'ambiguous-empty-list-marker',
+      );
+    }
+  });
+
   it('flags the marker inside a blockquote and reports its source position', () => {
     const matches = detectCase({
       context: 'blockquote',

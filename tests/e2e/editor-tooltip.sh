@@ -106,8 +106,11 @@ build_output=$(OBSIDIAN_TEST_VAULT="$vault_path" \
 "${OBSIDIAN[@]}" plugin:reload id=gremlins >/dev/null
 original_settings=$(obsidian_eval \
   "JSON.stringify(app.plugins.plugins.gremlins.settings)")
+# Isolate scenarios from the vault's saved rules; cleanup restores them.
+test_settings=$(node_modules/.bin/tsx --eval \
+  "import { DEFAULT_SETTINGS } from './src/settings-model.ts'; console.log(JSON.stringify({...DEFAULT_SETTINGS, showGutterIcons: true, showTypographicCharacters: true}));")
 "${OBSIDIAN[@]}" eval \
-  "code=app.plugins.plugins.gremlins.updateSettings({...app.plugins.plugins.gremlins.settings, showGutterIcons: true, showTypographicCharacters: true})" \
+  "code=app.plugins.plugins.gremlins.updateSettings($test_settings)" \
   >/dev/null
 "${OBSIDIAN[@]}" create "path=$TEST_PATH" 'content=em—dash' \
   overwrite open newtab >/dev/null

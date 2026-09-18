@@ -1,3 +1,5 @@
+import { countColumn as indentationWidth } from '@codemirror/state';
+
 import { GREMLIN_DEFINITIONS_BY_CODE_POINT } from './characters.ts';
 import { detectListItemEndingGremlins } from './list-item-endings.ts';
 import type { GremlinsSettings } from './settings-model.ts';
@@ -377,13 +379,9 @@ function detectAmbiguousEmptyListMarker(
   const previousDelimiter = previousListItem[3];
   const nextIndentation = nextListItem[1] ?? '';
   const currentWidth = indentationWidth(indentation, indentSize);
-  const previousWidth = indentationWidth(previousIndentation, indentSize);
-  const parentMarkerEnd =
-    previousWidth + (previousMarker?.length ?? 0);
   const minimumChildWidth = indentationWidth(
-    previousDelimiter ?? '',
+    `${previousIndentation}${previousMarker ?? ''}${previousDelimiter ?? ''}`,
     indentSize,
-    parentMarkerEnd,
   );
   const followsParent =
     previousMarker !== undefined &&
@@ -480,23 +478,6 @@ function isDefinitionEnabled(
   return definition.category === 'typographic'
     ? settings.showTypographicCharacters
     : settings.showDangerousCharacters;
-}
-
-function indentationWidth(
-  indentation: string,
-  indentSize: number,
-  initialWidth = 0,
-) {
-  let width = initialWidth;
-
-  for (const character of indentation) {
-    width =
-      character === '\t'
-        ? width + indentSize - (width % indentSize)
-        : width + 1;
-  }
-
-  return width;
 }
 
 function normalizeIndentSize(indentSize: number) {

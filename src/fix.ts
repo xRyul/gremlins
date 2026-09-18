@@ -1,3 +1,5 @@
+import { countColumn as indentationWidth } from '@codemirror/state';
+
 import { GREMLIN_DEFINITIONS_BY_CODE_POINT } from './characters.ts';
 import type { GremlinMatch } from './types.ts';
 
@@ -17,20 +19,8 @@ export interface GremlinFixChange {
 }
 
 export function isGremlinFixable(match: GremlinMatch) {
-  if (
-    match.kind === 'ambiguous-empty-list-marker' ||
-    match.kind === 'duplicate-list-marker' ||
-    match.kind === 'list-indentation' ||
-    match.kind === 'list-item-line-ending' ||
-    match.kind === 'list-item-punctuation' ||
-    match.kind === 'list-marker-spacing' ||
-    match.kind === 'missing-list-marker'
-  ) {
-    return true;
-  }
-
   return (
-    match.kind === 'mixed-indentation' ||
+    match.kind !== 'character' ||
     GREMLIN_DEFINITIONS_BY_CODE_POINT.has(match.codePoint)
   );
 }
@@ -285,19 +275,6 @@ function normalizeListIndentation(
 
 function normalizeIndentationWidth(width: number, indentSize: number) {
   return Math.round(width / indentSize) * indentSize;
-}
-
-function indentationWidth(indentation: string, indentSize: number) {
-  let width = 0;
-
-  for (const character of indentation) {
-    width =
-      character === '\t'
-        ? width + indentSize - (width % indentSize)
-        : width + 1;
-  }
-
-  return width;
 }
 
 function documentLines(documentText: string): DocumentLine[] {

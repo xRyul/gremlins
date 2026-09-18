@@ -85,37 +85,14 @@ export default class GremlinsPlugin extends Plugin {
       return false;
     }
 
-    const cursor = editor.getCursor();
-    const lineText = editor.getLine(cursor.line);
-    const [previousLine, nextLine] = getSurroundingLines(
-      editor,
-      cursor.line,
-    );
-    const lineFrom = editor.posToOffset({ ch: 0, line: cursor.line });
-    const editorState = getEditorState(editor);
-    const indentSize = getEditorIndentSize(editorState);
-    const listContext = editorState
-      ? getMarkdownListContext(editorState, lineText, lineFrom)
-      : 'unknown';
-    const documentText = editor.getValue();
-    const matches = [
-      ...detectLineGremlins(
-        lineText,
-        lineFrom,
-        cursor.line,
-        this.settings,
-        indentSize,
-        listContext,
-        previousLine,
-        nextLine,
-      ),
-      ...detectDocumentListItemEndings(
-        editorState,
-        documentText,
-        this.settings,
-        indentSize,
-      ).filter((match) => match.line === cursor.line),
-    ].sort((left, right) => left.from - right.from || left.to - right.to);
+    const {
+      cursor,
+      documentText,
+      indentSize,
+      lineFrom,
+      lineText,
+      matches,
+    } = this.collectCurrentLineGremlins(editor);
     const hasAmbiguousEmptyListMarker = matches.some(
       (match) => match.kind === 'ambiguous-empty-list-marker',
     );
@@ -166,7 +143,7 @@ export default class GremlinsPlugin extends Plugin {
     return true;
   }
 
-  private inspectGremlinAtCursor(editor: Editor, checking: boolean) {
+  private collectCurrentLineGremlins(editor: Editor) {
     const cursor = editor.getCursor();
     const lineText = editor.getLine(cursor.line);
     const [previousLine, nextLine] = getSurroundingLines(
@@ -198,6 +175,11 @@ export default class GremlinsPlugin extends Plugin {
         indentSize,
       ).filter((match) => match.line === cursor.line),
     ].sort((left, right) => left.from - right.from || left.to - right.to);
+    return { cursor, documentText, indentSize, lineFrom, lineText, matches };
+  }
+
+  private inspectGremlinAtCursor(editor: Editor, checking: boolean) {
+    const { cursor, matches } = this.collectCurrentLineGremlins(editor);
     const cursorOffset = editor.posToOffset(cursor);
     const match =
       findGremlinAtPosition(matches, cursorOffset, 1) ??

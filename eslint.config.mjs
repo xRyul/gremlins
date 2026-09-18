@@ -10,7 +10,7 @@ export default defineConfig(
       },
       parserOptions: {
         projectService: {
-          allowDefaultProject: ['eslint.config.mts'],
+          allowDefaultProject: ['eslint.config.mjs'],
         },
         tsconfigRootDir: import.meta.dirname,
       },

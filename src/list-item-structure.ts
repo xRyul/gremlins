@@ -1,3 +1,5 @@
+import { countColumn as indentationWidth } from '@codemirror/state';
+
 import type { MarkdownListContext } from './types.ts';
 
 const DEFAULT_INDENT_SIZE = 4;
@@ -482,17 +484,6 @@ function isListContextAccepted(context: MarkdownListContext | undefined) {
     context === 'root-list-item' ||
     context === 'unknown'
   );
-}
-
-function indentationWidth(indentation: string, indentSize: number) {
-  let width = 0;
-  for (const character of indentation) {
-    width =
-      character === '\t'
-        ? width + indentSize - (width % indentSize)
-        : width + 1;
-  }
-  return width;
 }
 
 function normalizeIndentSize(indentSize: number | undefined) {

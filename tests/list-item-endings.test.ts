@@ -1,3 +1,4 @@
+import { ChangeSet, Text } from '@codemirror/state';
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
@@ -22,15 +23,9 @@ function applyChanges(
   text: string,
   changes: readonly { from: number; insert: string; to: number }[],
 ) {
-  return [...changes]
-    .sort((left, right) => right.from - left.from || right.to - left.to)
-    .reduce(
-      (result, change) =>
-        result.slice(0, change.from) +
-        change.insert +
-        result.slice(change.to),
-      text,
-    );
+  return ChangeSet.of(changes, text.length, '\n')
+    .apply(Text.of(text.split('\n')))
+    .toString();
 }
 
 function fixDocument(text: string, matches: readonly GremlinMatch[]) {

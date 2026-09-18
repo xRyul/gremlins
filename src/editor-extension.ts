@@ -347,26 +347,7 @@ function decorationClasses(match: GremlinMatch) {
     'gremlins-character',
     `gremlins-severity-${match.severity}`,
     match.zeroWidth ? 'gremlins-zero-width' : 'gremlins-visible-width',
-    match.kind === 'ambiguous-empty-list-marker'
-      ? 'gremlins-ambiguous-empty-list-marker'
-      : '',
-    match.kind === 'duplicate-list-marker'
-      ? 'gremlins-duplicate-list-marker'
-      : '',
-    match.kind === 'mixed-indentation' ? 'gremlins-mixed-indentation' : '',
-    match.kind === 'list-indentation' ? 'gremlins-list-indentation' : '',
-    match.kind === 'list-marker-spacing'
-      ? 'gremlins-list-marker-spacing'
-      : '',
-    match.kind === 'list-item-line-ending'
-      ? 'gremlins-list-item-line-ending'
-      : '',
-    match.kind === 'list-item-punctuation'
-      ? 'gremlins-list-item-punctuation'
-      : '',
-    match.kind === 'missing-list-marker'
-      ? 'gremlins-missing-list-marker'
-      : '',
+    match.kind === 'character' ? '' : `gremlins-${match.kind}`,
   ]
     .filter(Boolean)
     .join(' ');

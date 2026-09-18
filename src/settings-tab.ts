@@ -28,102 +28,58 @@ export class GremlinsSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    new Setting(containerEl)
-      .setName('Dangerous and invisible characters')
-      .setDesc(
-        'Highlight zero-width characters, non-breaking spaces, soft hyphens, and bidirectional controls.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.controller.settings.showDangerousCharacters)
-          .onChange((value) =>
-            this.updateSettings({
-              showDangerousCharacters: value,
-            }),
-          ),
-      );
+    const addToggle = (
+      key: Exclude<
+        keyof GremlinsSettings,
+        'listItemLineEndingPolicy' | 'listItemPunctuationPolicy'
+      >,
+      name: string,
+      description: string,
+    ) =>
+      new Setting(containerEl)
+        .setName(name)
+        .setDesc(description)
+        .addToggle((toggle) =>
+          toggle
+            .setValue(this.controller.settings[key])
+            .onChange((value) => this.updateSettings({ [key]: value })),
+        );
 
-    new Setting(containerEl)
-      .setName('Mixed indentation')
-      .setDesc(
-        'Highlight leading indentation that contains both tabs and ordinary spaces.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.controller.settings.showMixedIndentation)
-          .onChange((value) =>
-            this.updateSettings({ showMixedIndentation: value }),
-          ),
-      );
-
-    new Setting(containerEl)
-      .setName('List indentation')
-      .setDesc(
-        'Highlight malformed list indentation and indented list markers without parent items, including markers parsed as indented code.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.controller.settings.showListIndentation)
-          .onChange((value) =>
-            this.updateSettings({ showListIndentation: value }),
-          ),
-      );
-
-    new Setting(containerEl)
-      .setName('Duplicate list markers')
-      .setDesc(
-        'Highlight consecutive unordered list markers such as “- - item”.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.controller.settings.showDuplicateListMarkers)
-          .onChange((value) =>
-            this.updateSettings({ showDuplicateListMarkers: value }),
-          ),
-      );
-
-    new Setting(containerEl)
-      .setName('List marker spacing')
-      .setDesc(
-        'Highlight unordered or ordered list markers followed by extra spaces or a tab.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.controller.settings.showListMarkerSpacing)
-          .onChange((value) =>
-            this.updateSettings({ showListMarkerSpacing: value }),
-          ),
-      );
-
-    new Setting(containerEl)
-      .setName('Ambiguous empty list markers')
-      .setDesc(
-        'Highlight lone hyphens that appear to be empty list items but may make Obsidian parse the preceding line as a heading.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(
-            this.controller.settings.showAmbiguousEmptyListMarkers,
-          )
-          .onChange((value) =>
-            this.updateSettings({
-              showAmbiguousEmptyListMarkers: value,
-            }),
-          ),
-      );
-
-    new Setting(containerEl)
-      .setName('Missing list markers')
-      .setDesc(
-        'Highlight under-indented text that appears to have lost an unordered-list marker before deeper sibling items.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.controller.settings.showMissingListMarkers)
-          .onChange((value) =>
-            this.updateSettings({ showMissingListMarkers: value }),
-          ),
-      );
+    addToggle(
+      'showDangerousCharacters',
+      'Dangerous and invisible characters',
+      'Highlight zero-width characters, non-breaking spaces, soft hyphens, and bidirectional controls.',
+    );
+    addToggle(
+      'showMixedIndentation',
+      'Mixed indentation',
+      'Highlight leading indentation that contains both tabs and ordinary spaces.',
+    );
+    addToggle(
+      'showListIndentation',
+      'List indentation',
+      'Highlight malformed list indentation and indented list markers without parent items, including markers parsed as indented code.',
+    );
+    addToggle(
+      'showDuplicateListMarkers',
+      'Duplicate list markers',
+      'Highlight consecutive unordered list markers such as “- - item”.',
+    );
+    addToggle(
+      'showListMarkerSpacing',
+      'List marker spacing',
+      'Highlight unordered or ordered list markers followed by extra spaces or a tab.',
+    );
+    addToggle(
+      'showAmbiguousEmptyListMarkers',
+      'Ambiguous empty list markers',
+      'Highlight lone hyphens that appear to be empty list items but may make Obsidian parse the preceding line as a heading.',
+    );
+    addToggle(
+      'showMissingListMarkers',
+      'Missing list markers',
+      'Highlight under-indented text that appears to have lost an unordered-list marker before deeper sibling items.',
+    );
 
     new Setting(containerEl)
       .setName('List item punctuation')
@@ -171,31 +127,16 @@ export class GremlinsSettingTab extends PluginSettingTab {
           ),
       );
 
-    new Setting(containerEl)
-      .setName('Typographic punctuation')
-      .setDesc(
-        'Highlight curly quotation marks, en dashes, and em dashes. Disabled by default because these are common in prose.',
-      )
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.controller.settings.showTypographicCharacters)
-          .onChange((value) =>
-            this.updateSettings({
-              showTypographicCharacters: value,
-            }),
-          ),
-      );
-
-    new Setting(containerEl)
-      .setName('Gutter icons')
-      .setDesc('Show a bug icon beside each visible line that contains a gremlin.')
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.controller.settings.showGutterIcons)
-          .onChange((value) =>
-            this.updateSettings({ showGutterIcons: value }),
-          ),
-      );
+    addToggle(
+      'showTypographicCharacters',
+      'Typographic punctuation',
+      'Highlight curly quotation marks, en dashes, and em dashes. Disabled by default because these are common in prose.',
+    );
+    addToggle(
+      'showGutterIcons',
+      'Gutter icons',
+      'Show a bug icon beside each visible line that contains a gremlin.',
+    );
 
     new Setting(containerEl)
       .setName('Click gutter icons to fix')
