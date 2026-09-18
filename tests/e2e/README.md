@@ -67,6 +67,7 @@ These are destinations for future migrations, not a claim that the remaining cov
 | `settings.test.ts` | Application defaults and disabled-rule behaviour in the relevant detection/fixing scenarios, not a separate settings suite. |
 | `styles.test.ts` | Add `editor-layout.sh` when migrating: assert actual gutter positioning and layout, not CSS source strings. This suite does not exist yet. |
 
+`list-ending-fallback.test.ts` deliberately remains Node-only: a fully parsed live editor cannot exercise the no-parser branch. Ten input/expected-output vectors run through the parserless detector, whole-document detector and a real CodeMirror state without a language extension (three tests, 30 combinations). They also preserve match counts/order and simultaneous multi-line fix application. No parser classifications are injected.
 
 ## Fixtures and isolation
 
@@ -76,12 +77,13 @@ These are destinations for future migrations, not a claim that the remaining cov
 - Scenarios run sequentially. A vault-local `.gremlins-e2e-lock/` directory prevents simultaneous runners, including from other checkouts.
 - The runner saves plugin settings, the exact persisted `data.json` (including whether it existed), indent width and the active tab. It closes test tabs, removes its working directory and restores state after success, failure, Ctrl-C or SIGTERM. If restoration fails, the run fails and retains the lock/recovery snapshot rather than allowing another run against unrestored state.
 - Fixtures contain significant tabs and trailing spaces. Do not reformat them. Local EditorConfig/Git attributes protect whitespace and LF line endings; the tests also check important fixture bytes.
+- `line-endings-no-final-newline.md` deliberately has no final newline. Its EditorConfig exception and exact-byte assertion preserve that input; detection, combined punctuation/hard-break fixes and sibling separators must not append a newline.
 
 The runner uses a short CLI `eval` call to read temporary JavaScript from the lock directory. Large `code=` arguments triggered malformed CLI IPC messages on Windows Obsidian 1.13.7. Assertions still execute in the actual application, one scenario per call. CLI exit codes alone are not trusted: Obsidian can print an evaluation error and exit zero.
 
 ## Coverage
 
-`detect.sh` is the read-only detection suite: 125 scenarios in both Source mode and Live Preview (250 executions). It covers the former detection, ambiguous-empty-list-marker and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
+`detect.sh` is the read-only detection suite: 128 scenarios in both Source mode and Live Preview (256 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
 
 - Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
 - Mixed indentation, pure tabs/spaces, multiline source offsets and the disabled rule.
@@ -101,7 +103,7 @@ Unlike the old parserless indentation examples, `deep-list-indentation.md` and `
 
 The old tabbed empty-marker example without a root list is actually indented code in Obsidian and is retained as a negative fixture. `tabbed-nested-parent.md` adds a real root list to exercise the intended positive tab-width cases. The old parserless checks are represented by real fenced/indented-code documents, not by simulating a missing parser.
 
-`fix.sh` owns user-requested edits and no-op actions: 94 scenarios covering the former fixing and list-item-endings unit tests plus unique fix expectations moved out of the detection and tooltip suites. Each starts from a fresh fixture for both the fix command and gutter click, in both editor modes (376 executions). Highlights are preconditions, not a repeat of the detection suite's exact range/style assertions. Checks cover gutter interactivity, the entire document after each edit, persisted file contents, and remaining warnings.
+`fix.sh` owns user-requested edits and no-op actions: 97 scenarios covering the user-visible behaviour from the former fixing and list-item-endings unit tests plus unique fix expectations moved out of the detection and tooltip suites. Each starts from a fresh fixture for both the fix command and gutter click, in both editor modes (388 executions). Highlights are preconditions, not a repeat of the detection suite's exact range/style assertions. Checks cover gutter interactivity, the entire document after each edit, persisted file contents, and remaining warnings.
 
 - All 31 currently supported Unicode characters: deletion-only controls (including grouped zero-width spaces), repeated/other Unicode spaces, line/paragraph separators and all six typographic replacements. Unknown astral characters remain untouched.
 - Block dedentation from parents and deeper children, preserving nested lists, tabbed delimiters and continuation lines, and respecting blank lines and heading boundaries. Independent roots and mixed ordered/unordered code-shaped blocks are included.
@@ -126,7 +128,9 @@ Assertions recognize the custom mascot rather than a blank or built-in icon, che
 
 ## List-item-ending migration
 
-The 44 checks formerly in `tests/list-item-endings.test.ts` are covered by the existing behaviour suites, not a new executor. This migration adds 78 detection scenarios and 37 fix/no-op scenarios (304 live executions), including additional formula and formatted-continuation regressions. The existing simultaneous punctuation/hard-break and semantic-ending scenarios are reused.
+The 44 tests formerly in `tests/list-item-endings.test.ts` are split between the existing live behaviour suites and the focused Node fallback contracts described above. This migration adds 81 detection scenarios and 40 fix/no-op scenarios (322 live executions), including additional formula and formatted-continuation regressions. The existing simultaneous punctuation/hard-break and semantic-ending scenarios are reused.
+
+A follow-up parity audit restored the original dated wikilink targets and the child prose ending in multiple wikilinks; a standalone link remains exempt, but prose ending in a link does not. The blockquote inference check asserts the period-specific inspection notice, not just a warning range. End-of-file input without a final newline is also covered.
 
 Live testing exposed gaps hidden by fabricated/parserless contexts:
 
@@ -140,7 +144,7 @@ Some old inputs did not mean what their injected contexts claimed:
 - The old nested lazy example renders both following lines inside the child. `punctuation-lazy-nested.md` uses deeper child indentation and a blank line before the parent paragraph to test the intended distinct owners; root and quoted lazy continuation cases retain their original inputs.
 - A truly root-level fenced block replaces the invented root-literal classification of an indented continuation. Nested fences/comments and root fences are tested separately.
 - Separate prose in the trailing-whitespace fixture has a blank separator; without it Obsidian renders that prose as a lazy list continuation.
-- Synthetic `unknown` parser states are not injected into E2E. Their user-facing inference expectation is checked on the actual parsed lists.
+- The live suite waits for a complete parse. Missing-parser and `unknown`-context detection are checked separately in `list-ending-fallback.test.ts`, using a real CodeMirror state with no language extension rather than fabricated parser classifications.
 
 These distinctions were checked against Obsidian's editor syntax tree and, for lazy ownership, its Reading view output. Fixtures preserve the behaviour under test without manufacturing parser classifications.
 

@@ -1,2 +1,2 @@
-- [[Project]] - Date when Project was handed to me
-- [[Meeting]]  
+- [[2026-07-27 - ENERGISE - 10am - Standup]] - Date when Project was handed to me
+- [[2026-07-27 - ENERGISE - 2pm - Sprint 73 start - Sprint Retro]]  

@@ -11,6 +11,7 @@ read -r -d '' detection_cases <<'JS' || true
   test.assert(test.defaults.showAmbiguousEmptyListMarkers === false, 'Empty-marker rule must be disabled in application defaults');
   test.assert(test.fixtures['delimited-marker.md'].split('\n')[1] === '    - ', 'Fixture lost its significant trailing space');
   test.assert(test.fixtures['tabbed-parent.md'].startsWith('\t-\tParent\n\t\t-\n'), 'Fixture tabs were reformatted');
+  test.assert(test.fixtures['line-endings-no-final-newline.md'] === '- First\n- Second', 'Fixture must have no final newline');
   test.detectionCases = [
     // Characters: grouping, severity, source ranges, defaults and opt-in punctuation.
     {name: 'consecutive zero-width spaces', file: 'zero-width-spaces.md', kind: 'character',
@@ -160,12 +161,16 @@ read -r -d '' detection_cases <<'JS' || true
       {name: 'parent colon preserves formal-list position', file: 'punctuation-formal-parent-colon.md', policy: 'semicolon-final-period', marks: []},
       {name: 'leaf colon still requires punctuation', file: 'punctuation-leaf-colon.md', marks: [{line: 0, ch: 6, text: ':'}]},
       {name: 'multiline item uses its final content line', file: 'punctuation-multiline.md', marks: [{line: 3, ch: 10, text: 's'}]},
-      {name: 'blockquote list excludes fenced examples', file: 'punctuation-quoted-fence.md', policy: 'consistent', marks: [{line: 1, ch: 9, text: 'd'}]},
+      {name: 'blockquote list excludes fenced examples', file: 'punctuation-quoted-fence.md', policy: 'consistent', marks: [
+        {line: 1, ch: 9, text: 'd', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+      ]},
       {name: 'punctuation belongs before a block ID', file: 'punctuation-block-ids.md', marks: [{line: 1, ch: 7, text: 'd'}]},
       {name: 'tasks, formatting and link labels', file: 'punctuation-formatting.md', marks: [{line: 3, ch: 15, text: '*'}]},
-      {name: 'standalone wikilink exempt but accompanying prose is not', file: 'punctuation-wikilinks.md', marks: [{line: 0, ch: 49, text: 'e'}]},
+      {name: 'standalone wikilink exempt but accompanying prose is not', file: 'punctuation-wikilinks.md', marks: [{line: 0, ch: 80, text: 'e'}]},
       {name: 'single-token all-caps task label needs no period', file: 'punctuation-caps.md', marks: []},
-      {name: 'unpunctuated parents introducing children need no period', file: 'punctuation-label-parents.md', marks: [{line: 1, ch: 28, text: '*'}]},
+      {name: 'parent labels are exempt but child prose ending in wikilinks is not', file: 'punctuation-label-parents.md', marks: [
+        {line: 1, ch: 155, text: ']', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+      ]},
       {name: 'highlight the whole final astral code point', file: 'punctuation-astral.md', marks: [{line: 0, ch: 2, text: '👾'}]},
       ...['consistent', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
         name: 'multiline formula is exempt under ' + policy, file: 'punctuation-math-only.md', policy, marks: [],
@@ -237,6 +242,13 @@ read -r -d '' detection_cases <<'JS' || true
       name: 'unindented formatted continuation in ' + file, file, kind: 'list-item-punctuation',
       settings: {listItemPunctuationPolicy: 'period'}, marks: [{line: 1, ch, text}],
     })),
+    ...['list-item-punctuation', 'list-item-line-ending'].map(kind => ({
+      name: 'combined ' + kind + ' at EOF without a newline', file: 'line-endings-no-final-newline.md', kind,
+      settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'},
+      marks: [{line: 0, ch: 6, text: 't'}, {line: 1, ch: 7, text: 'd'}],
+    })),
+    {name: 'sibling separator without a final newline', file: 'line-endings-no-final-newline.md', kind: 'list-item-line-ending',
+      settings: {listItemLineEndingPolicy: 'blank-line'}, marks: [{line: 0, ch: 6, text: 't'}]},
   ];
   test.runDetectionCase = async (index, mode) => {
     const scenario = test.detectionCases[index];

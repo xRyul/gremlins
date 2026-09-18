@@ -1,4 +1,4 @@
 - [ ] Work  
-    - [x] Work on **Project**  
+    - [x] Work on Project: **Library upload download** of the report [[2026-07-27 - ENERGISE - 10am - Standup]] + [[2026-07-28 - ENERGISE - 10am - Standup]]  
 - [x] Home   
-    - [x] [[Note]]  
+    - [x] [[Obsidian Image Converter]]  

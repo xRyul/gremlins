@@ -205,7 +205,7 @@ read -r -d '' fix_cases <<'JS' || true
         {line: 3, ch: 15, marks: {'list-item-punctuation': '*'}, fixed: {3: '- [ ] **Fourth**.'}},
       ]},
       {name: 'punctuate wikilink prose but leave the standalone link intact', file: 'punctuation-wikilinks.md', steps: [
-        {line: 0, marks: {'list-item-punctuation': 'e'}, fixed: {0: '- [[Project]] - Date when Project was handed to me.'}},
+        {line: 0, marks: {'list-item-punctuation': 'e'}, fixed: {0: '- [[2026-07-27 - ENERGISE - 10am - Standup]] - Date when Project was handed to me.'}},
       ]},
       {name: 'preserve a complete astral code point', file: 'punctuation-astral.md', steps: [
         {line: 0, marks: {'list-item-punctuation': '👾'}, fixed: {0: '- 👾.'}},
@@ -296,6 +296,19 @@ read -r -d '' fix_cases <<'JS' || true
       settings: {listItemPunctuationPolicy: 'period'},
       steps: [{line: 1, ch, marks: {'list-item-punctuation': text}, fixed: {1: fixed}}],
     })),
+    {name: 'punctuate child prose ending in wikilinks, not its parent labels', file: 'punctuation-label-parents.md',
+      settings: {listItemPunctuationPolicy: 'period'}, steps: [
+        {line: 1, ch: 155, marks: {'list-item-punctuation': ']'}, fixed: {1: '    - [x] Work on Project: **Library upload download** of the report [[2026-07-27 - ENERGISE - 10am - Standup]] + [[2026-07-28 - ENERGISE - 10am - Standup]].  '}},
+      ]},
+    {name: 'compose punctuation and hard breaks without adding a final newline', file: 'line-endings-no-final-newline.md',
+      settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'}, steps: [
+        {line: 0, marks: {'list-item-punctuation': 't', 'list-item-line-ending': 't'}, fixed: {0: '- First.  '}},
+        {line: 1, marks: {'list-item-punctuation': 'd', 'list-item-line-ending': 'd'}, fixed: {1: '- Second.  '}},
+      ]},
+    {name: 'insert a sibling separator without adding a final newline', file: 'line-endings-no-final-newline.md',
+      settings: {listItemLineEndingPolicy: 'blank-line'}, steps: [
+        {line: 0, marks: {'list-item-line-ending': 't'}, fixed: {0: '- First\n'}},
+      ]},
   ];
   test.assert(test.fixtures['fix-unknown-character.md'] === 'Before\n👾\nAfter\n', 'Unknown-character fixture changed');
   test.assert(test.defaults.enableClickToFix === false, 'Fixing must remain disabled in application defaults');
