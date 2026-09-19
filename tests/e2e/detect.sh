@@ -8,11 +8,20 @@ read -r -d '' detection_cases <<'JS' || true
 (() => {
   const test = window.__gremlinsE2E;
   test.assert(test.fixtures['pure-indentation.md'] === '\t\tNested\n    Nested\n', 'Pure-indentation fixture was reformatted');
-  test.assert(test.defaults.showAmbiguousEmptyListMarkers === false, 'Empty-marker rule must be disabled in application defaults');
+  for (const [key, value] of Object.entries({
+    showAmbiguousEmptyListMarkers: false,
+    showDuplicateListMarkers: false,
+    showListIndentation: false,
+    showListMarkerSpacing: false,
+    showMissingListMarkers: false,
+    listItemPunctuationPolicy: 'disabled',
+    listItemLineEndingPolicy: 'disabled',
+  })) {
+    test.assert(test.defaults[key] === value, `${key} must be ${JSON.stringify(value)} in application defaults`);
+  }
   test.assert(test.fixtures['delimited-marker.md'].split('\n')[1] === '    - ', 'Fixture lost its significant trailing space');
   test.assert(test.fixtures['tabbed-parent.md'].startsWith('\t-\tParent\n\t\t-\n'), 'Fixture tabs were reformatted');
   test.assert(test.fixtures['line-endings-no-final-newline.md'] === '- First\n- Second', 'Fixture must have no final newline');
-  test.assert(test.defaults.showDuplicateListMarkers === false && test.defaults.showListMarkerSpacing === false, 'Marker cleanup rules must be disabled in application defaults');
   test.assert(test.fixtures['duplicate-empty-markers.md'] === '- -\n\n- -  \n', 'Empty retained-marker fixture lost its trailing spaces');
   test.assert(test.fixtures['list-marker-setext.md'] === '-  \n\n> -  \n\nHeading\n-  \n\n> Heading\n> -  \n', 'Potential Setext underlines lost their trailing spaces');
   test.assert(test.fixtures['list-marker-thematic-breaks.md'] === '- - -\n\n> - - -\n\n> *  *  *\n', 'Thematic-break marker spacing changed');
@@ -178,6 +187,7 @@ read -r -d '' detection_cases <<'JS' || true
         notice: 'Missing list marker · Line appears to be a sibling of the following list item · Warning'}]},
     {name: 'missing marker before a tabbed star item', file: 'tabbed-missing-list-marker.md', kind: 'missing-list-marker',
       settings: {showMissingListMarkers: true}, marks: [{line: 2, ch: 0, text: '\t'}]},
+    {name: 'missing markers disabled in application defaults', file: 'missing-list-marker.md', kind: 'missing-list-marker', marks: []},
     {name: 'ordinary list continuation', file: 'list-continuation.md', kind: 'missing-list-marker',
       settings: {showMissingListMarkers: true}, marks: [], line: 1},
 

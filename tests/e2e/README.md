@@ -56,13 +56,9 @@ Create another suite only for a genuinely different behaviour or UI surface. For
 
 Keep the layout flat while it remains easy to navigate. If a suite becomes unwieldy, split its scenario definitions into smaller files while retaining one executor. Do not introduce a folder or runner for every setting.
 
-### Migration targets for remaining Node suites
+### Remaining Node-only contracts
 
-These are destinations for future migrations, not a claim that the remaining coverage is already live. Remove or revise each entry as its migration finishes.
-
-| Existing file under `tests/` | Live destination |
-|---|---|
-| `settings.test.ts` | Application defaults and disabled-rule behaviour in the relevant detection/fixing scenarios, not a separate settings suite. |
+The remaining Node checks cover paths that fully parsed live editor scenarios cannot exercise:
 
 `list-ending-fallback.test.ts` deliberately remains Node-only: a fully parsed live editor cannot exercise the no-parser branch. Ten input/expected-output vectors run through the parserless detector, whole-document detector and a real CodeMirror state without a language extension (three tests, 30 combinations). They also preserve match counts/order and simultaneous multi-line fix application. No parser classifications are injected.
 
@@ -82,7 +78,7 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 
 ## Coverage
 
-`detect.sh` is the read-only detection suite: 152 scenarios in both Source mode and Live Preview (304 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, match-position, presentation, Markdown-context, list-marker-cleanup and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
+`detect.sh` is the read-only detection suite: 153 scenarios in both Source mode and Live Preview (306 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, match-position, presentation, Markdown-context, list-marker-cleanup, list-item-endings and settings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
 
 - Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
 - Cursor inspection at opening/closing boundaries, zero-width characters and adjacent gremlins, including no notice outside a match.
@@ -90,7 +86,7 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 - Root/orphaned lists, nested alignment at indent widths 2/4, absolute depth when level-four marker styles cycle, non-list content, literal regions and defaults.
 - Ambiguous empty list markers: parent/child and sibling contexts, marker/delimiter widths, blockquotes, literal-region exclusions, defaults and tab widths 2/4/8 (21 scenarios).
 - Duplicate markers and marker spacing: unordered/ordered delimiters, tabs, compact nesting, quoted lists, digit limits, overlapping-rule suppression, defaults and literal/thematic/Setext exclusions.
-- Missing markers in pasted task lists, tabbed/star-marker contexts, and ordinary continuation text.
+- Missing markers in pasted task lists, tabbed/star-marker contexts, ordinary continuation text and the disabled application default.
 - Missing list-item punctuation/hard breaks and semantic-ending exceptions, with both rules enabled together.
 - All punctuation policies, per-list/nested inference, first-item ties, formal-list endings, semantic punctuation, parent colons and display-math exemptions.
 - Multiline/lazy continuations, tasks, formatting, link labels and targets, block IDs, complete astral characters, escapes, and literal-region exclusions.
@@ -127,6 +123,25 @@ A blank-line boundary must leave the second block's text untouched. After the fi
 Assertions recognize the custom mascot rather than a blank or built-in icon, check its 12–16 px size and viewBox fit, and retain the lightweight geometry limits (at most four paths, SVG body below 1 KB, no gradients/filters). Computed fill/stroke colours must follow the severity token, including when that token changes locally on the marker. The local style is restored without changing the vault theme. This replaces the literal source-transform check with rendered geometry checks and the source-code registration checks with actual rendering.
 
 `editor-tooltip.sh` owns character/structural/gutter hover behaviour: the existing Source-mode duplicate-tooltip checks plus ten boundary and eleven message-content scenarios in both Source mode and Live Preview (42 executions). It uses one hover executor, the runner's `waitFor()` helper and trusted CDP pointer movements. Exact gutter accessibility-label text belongs to `gremlin-icon.sh`; detection/inspection and fixing belong to `detect.sh` and `fix.sh`.
+
+## Settings-default migration
+
+All eight assertions formerly in `tests/settings.test.ts` now check defaults loaded by the built plugin inside Obsidian, alongside observable disabled-rule behaviour. The shared runner reloads Gremlins with empty saved settings and captures the resulting application settings; no `DEFAULT_SETTINGS` import or expected-value injection supplies the defaults.
+
+| Former default assertion | Live coverage |
+|---|---|
+| `enableClickToFix === false` | `fix.sh` asserts the loaded value, then uses it in the orphaned-block no-op scenario instead of hardcoding `false`. With indentation detection enabled, the block remains highlighted and unchanged after command and gutter actions, including saved contents. |
+| `showAmbiguousEmptyListMarkers === false` | `detect.sh`: the default `parent-child.md` scenario has no ambiguous-marker highlight; the enabled scenario highlights its lone hyphen. |
+| `showDuplicateListMarkers === false` | `detect.sh`: `list-marker-defaults.md` remains free of duplicate-marker highlights; enabled duplicate-marker cases retain their exact ranges. |
+| `showListIndentation === false` | `detect.sh`: default `root-list-indentation.md` has no indentation highlights; the enabled scenario highlights its orphaned roots. |
+| `showListMarkerSpacing === false` | `detect.sh`: `list-marker-defaults.md` has no spacing highlights; enabled spacing cases retain their exact ranges. |
+| `showMissingListMarkers === false` | `detect.sh`: the new default `missing-list-marker.md` scenario has no missing-marker highlight; the existing enabled scenario detects the pasted-list gap. |
+| `listItemPunctuationPolicy === 'disabled'` | `detect.sh`: default `list-endings.md` has no punctuation highlights; enabled policies still report their expected punctuation. |
+| `listItemLineEndingPolicy === 'disabled'` | `detect.sh`: default `list-endings.md` has no line-ending highlights; the enabled hard-break policy still detects the missing trailing spaces. |
+
+The seven detection defaults are also compared with their exact expected values, so an absent value or different policy cannot masquerade as disabled behaviour. Detection scenarios run in both editor modes and preserve editor/saved contents. Fixing runs in both modes through both actions. This adds one detection scenario (two executions), reuses existing fixtures/executors and introduces no settings UI suite or production changes.
+
+Failure-sensitivity checks temporarily enabled each setting after opening its default-disabled scenario. All eight live assertions rejected the changed behaviour; settings, persisted data, editor options, active tab and fixture/lock state were restored after each failure.
 
 ## Editor-layout migration
 

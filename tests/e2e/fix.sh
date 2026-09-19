@@ -221,8 +221,8 @@ read -r -d '' fix_cases <<'JS' || true
     {name: 'empty-marker fixes disabled by default', file: 'parent-child.md', noFix: true, steps: [
       {line: 1, marks: {'ambiguous-empty-list-marker': ''}},
     ]},
-    {name: 'fixing disabled leaves the entire orphaned block untouched', file: 'fix-orphaned-tabs.md', noFix: true,
-      settings: {showListIndentation: true, enableClickToFix: false}, steps: [
+    {name: 'application-default fixing leaves the entire orphaned block untouched', file: 'fix-orphaned-tabs.md', noFix: true,
+      settings: {showListIndentation: true, enableClickToFix: test.defaults.enableClickToFix}, steps: [
         {line: 1, marks: {'list-indentation': '\t'}},
       ], remaining: {'list-indentation': [1, 2, 3]}},
     ...[
