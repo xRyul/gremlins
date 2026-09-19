@@ -44,6 +44,7 @@ Group tests by observable behaviour, not by setting, source function or former u
 | [editor-layout.sh](editor-layout.sh) | Actual gutter geometry, line-number/folding coexistence, marker alignment, no added layout width and restoration when the gutter is disabled. |
 | [gremlin-icon.sh](gremlin-icon.sh) | Rendered mascot identity, geometry, size, severity precedence, colour inheritance and accessibility labels. Excludes CodeMirror's hidden spacer icon. |
 | [editor-tooltip.sh](editor-tooltip.sh) | Hover messages, opening/closing boundaries, zero-width and adjacent matches, and prevention of duplicate tooltips. |
+| [settings-tab.sh](settings-tab.sh) | Settings-page grouping, retained values, control persistence and the gutter/click-to-fix dependency. |
 | [check-cleanup.sh](check-cleanup.sh) | Deliberately fail after setup and verify that fixture files, lock, test globals, settings, persisted data, editor options and the active tab are restored. |
 | [fixtures/](fixtures/) | Committed Markdown inputs. Settings and expected results belong in the suite's scenario definitions. Fixtures are not bundled into the released plugin. |
 

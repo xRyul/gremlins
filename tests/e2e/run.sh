@@ -311,6 +311,7 @@ if [[ ${1:-} == --fail-after-setup ]]; then
   fail 'The intentional application error was not detected'
 fi
 
+source tests/e2e/settings-tab.sh
 source tests/e2e/editor-layout.sh
 source tests/e2e/gremlin-icon.sh
 source tests/e2e/fix.sh

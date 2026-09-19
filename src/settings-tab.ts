@@ -45,11 +45,21 @@ export class GremlinsSettingTab extends PluginSettingTab {
             .onChange((value) => this.updateSettings({ [key]: value })),
         );
 
+    new Setting(containerEl).setName('Characters').setHeading();
+
     addToggle(
       'showDangerousCharacters',
       'Dangerous and invisible characters',
       'Highlight zero-width characters, non-breaking spaces, soft hyphens, and bidirectional controls.',
     );
+    addToggle(
+      'showTypographicCharacters',
+      'Typographic punctuation',
+      'Highlight curly quotation marks, en dashes, and em dashes. Disabled by default because these are common in prose.',
+    );
+
+    new Setting(containerEl).setName('Indentation').setHeading();
+
     addToggle(
       'showMixedIndentation',
       'Mixed indentation',
@@ -60,6 +70,9 @@ export class GremlinsSettingTab extends PluginSettingTab {
       'List indentation',
       'Highlight malformed list indentation and indented list markers without parent items, including markers parsed as indented code.',
     );
+
+    new Setting(containerEl).setName('List markers').setHeading();
+
     addToggle(
       'showDuplicateListMarkers',
       'Duplicate list markers',
@@ -81,10 +94,12 @@ export class GremlinsSettingTab extends PluginSettingTab {
       'Highlight under-indented text that appears to have lost an unordered-list marker before deeper sibling items.',
     );
 
+    new Setting(containerEl).setName('List style').setHeading();
+
     new Setting(containerEl)
       .setName('List item punctuation')
       .setDesc(
-        'Enforce style punctuation within each list while preserving meaningful sentence endings and display math. The period policy skips standalone wikilinks, single-token all-caps labels, and unpunctuated items that introduce nested lists. Automatic matching infers each list independently.',
+        'Highlight inconsistent punctuation within each list while preserving meaningful sentence endings and display math. The period policy skips standalone wikilinks, single-token all-caps labels, and unpunctuated items that introduce nested lists. Automatic matching infers each list independently.',
       )
       .addDropdown((dropdown) =>
         dropdown
@@ -108,7 +123,7 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('List item line endings')
       .setDesc(
-        'Enforce trailing whitespace or blank-line separation. Hard breaks skip nested-list parents, block ids, and display math.',
+        'Highlight trailing whitespace or blank-line separation that differs from the selected style. Hard breaks skip nested-list parents, block ids, and display math.',
       )
       .addDropdown((dropdown) =>
         dropdown
@@ -127,11 +142,11 @@ export class GremlinsSettingTab extends PluginSettingTab {
           ),
       );
 
-    addToggle(
-      'showTypographicCharacters',
-      'Typographic punctuation',
-      'Highlight curly quotation marks, en dashes, and em dashes. Disabled by default because these are common in prose.',
-    );
+    new Setting(containerEl)
+      .setName('Display and fixes')
+      .setDesc('Nothing is fixed automatically. Notes change only when you explicitly run a fix.')
+      .setHeading();
+
     addToggle(
       'showGutterIcons',
       'Gutter icons',
