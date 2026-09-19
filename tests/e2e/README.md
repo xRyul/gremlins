@@ -60,7 +60,6 @@ These are destinations for future migrations, not a claim that the remaining cov
 
 | Existing file under `tests/` | Live destination |
 |---|---|
-| `match-position.test.ts` | Cursor inspection in `detect.sh`; hover-boundary behaviour in `editor-tooltip.sh`. |
 | `presentation.test.ts` | Actual inspection notices, tooltip content or icon severity, according to the visible output being checked. |
 | `settings.test.ts` | Application defaults and disabled-rule behaviour in the relevant detection/fixing scenarios, not a separate settings suite. |
 | `styles.test.ts` | Add `editor-layout.sh` when migrating: assert actual gutter positioning and layout, not CSS source strings. This suite does not exist yet. |
@@ -81,9 +80,10 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 
 ## Coverage
 
-`detect.sh` is the read-only detection suite: 150 scenarios in both Source mode and Live Preview (300 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, Markdown-context, list-marker-cleanup and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
+`detect.sh` is the read-only detection suite: 151 scenarios in both Source mode and Live Preview (302 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, match-position, Markdown-context, list-marker-cleanup and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
 
 - Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
+- Cursor inspection at opening/closing boundaries, zero-width characters and adjacent gremlins, including no notice outside a match.
 - Mixed indentation, pure tabs/spaces, multiline source offsets and the disabled rule.
 - Root/orphaned lists, nested alignment at indent widths 2/4, absolute depth when level-four marker styles cycle, non-list content, literal regions and defaults.
 - Ambiguous empty list markers: parent/child and sibling contexts, marker/delimiter widths, blockquotes, literal-region exclusions, defaults and tab widths 2/4/8 (21 scenarios).
@@ -124,7 +124,22 @@ A blank-line boundary must leave the second block's text untouched. After the fi
 
 Assertions recognize the custom mascot rather than a blank or built-in icon, check its 12–16 px size and viewBox fit, and retain the lightweight geometry limits (at most four paths, SVG body below 1 KB, no gradients/filters). Computed fill/stroke colours must follow the severity token, including when that token changes locally on the marker. The local style is restored without changing the vault theme. This replaces the literal source-transform check with rendered geometry checks and the source-code registration checks with actual rendering.
 
-`editor-tooltip.sh` owns only character/gutter hover behaviour in Source mode: the intended tooltip appears without an additional Obsidian or browser-native tooltip. It uses the runner's `waitFor()` helper, retaining retries of the actual hover gesture. Exact gutter accessibility-label text belongs to `gremlin-icon.sh`; list-ending detection and fixing belong to `detect.sh` and `fix.sh`.
+`editor-tooltip.sh` owns character/gutter hover behaviour: the existing Source-mode duplicate-tooltip checks plus ten boundary scenarios in both Source mode and Live Preview (20 boundary executions). It uses the runner's `waitFor()` helper and trusted CDP pointer movements. Exact gutter accessibility-label text belongs to `gremlin-icon.sh`; detection/inspection and fixing belong to `detect.sh` and `fix.sh`.
+
+## Match-position migration
+
+All four checks formerly in `tests/match-position.test.ts` are exercised through real pointer events in `editor-tooltip.sh`, using `character-boundaries.md`. One additional detection scenario runs eight cursor-inspection assertions in each mode. Both suites verify unchanged editor and saved content; neither imports the position helper or creates match objects.
+
+| Original boundary check | Live assertions in each editor mode |
+|---|---|
+| Visible-width opening, side +1 versus -1 | Hover at NBSP's opening returns its exact tooltip from the right and no tooltip from the left. Inspection at the opening returns the NBSP notice. |
+| Zero-width opening, either side | Hover resolves to the actual U+200B opening with side -1 and +1; both show the zero-width-space tooltip. Cursor inspection checks its opening and closing offsets. |
+| Visible-width closing, side -1 versus +1 | Hover at NBSP's closing shows its tooltip from the left and nothing from the right. Cursor inspection still finds it through the command's left-side fallback. |
+| Adjacent matches selected by pointer side | At the shared NBSP/U+200C boundary, left shows NBSP and right shows the non-joiner. A second pair, NBSP/figure-space, covers two genuinely visible-width characters. Cursor inspection prefers the right-hand match for both pairs. |
+
+The old synthetic NBSP had error severity and its adjacent U+200C inherited `zeroWidth: false`. The fixture uses their genuine warning/zero-width definitions; the figure-space pair preserves ordinary visible-width adjacency coverage. Two cursor positions outside the isolated NBSP must produce no new notice.
+
+Chromium quantizes trusted mouse coordinates to integer CSS pixels. Before each hover case, a subpixel translation aligns only the temporary editor's tested boundary to an integer; this makes side +1 reachable at a zero-width opening without changing character widths or faking pointer-side arguments. The actual event must be trusted and resolve to the intended document offset and side. The transform and event listener are restored after the assertion; the shared runner removes the temporary editor on failure. Negative cases wait past the real hover delay before asserting absence.
 
 ## List-item-ending migration
 

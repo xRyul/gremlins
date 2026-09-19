@@ -24,6 +24,21 @@ read -r -d '' detection_cases <<'JS' || true
         notice: '2 zero-width spaces · Unicode U+200B · Error'}]},
     {name: 'non-breaking space', file: 'non-breaking-space.md', kind: 'character',
       marks: [{line: 0, ch: 1, text: '\u00a0', notice: 'non-breaking space · Unicode U+00A0 · Warning'}]},
+    {name: 'cursor inspection at character boundaries and adjacent gremlins', file: 'character-boundaries.md', kind: 'character',
+      marks: [
+        {line: 0, ch: 1, text: '\u00a0'},
+        {line: 1, ch: 4, text: '\u200b', severity: 'error', zeroWidth: true},
+        {line: 2, ch: 1, text: '\u00a0'}, {line: 2, ch: 2, text: '\u200c', zeroWidth: true},
+        {line: 3, ch: 1, text: '\u00a0'}, {line: 3, ch: 2, text: '\u2007'},
+      ], inspections: [
+        {line: 0, ch: 1, notice: 'non-breaking space · Unicode U+00A0 · Warning'},
+        {line: 0, ch: 2, notice: 'non-breaking space · Unicode U+00A0 · Warning'},
+        {line: 0, ch: 0, notice: null}, {line: 0, ch: 3, notice: null},
+        {line: 1, ch: 4, notice: 'zero-width space · Unicode U+200B · Error'},
+        {line: 1, ch: 5, notice: 'zero-width space · Unicode U+200B · Error'},
+        {line: 2, ch: 2, notice: 'zero-width non-joiner · Unicode U+200C · Warning'},
+        {line: 3, ch: 2, notice: 'figure space · Unicode U+2007 · Warning'},
+      ]},
     {name: 'typographic punctuation disabled by default', file: 'typographic-punctuation.md', kind: 'character', marks: []},
     {name: 'curly quotes and en/em dashes enabled', file: 'typographic-punctuation.md', kind: 'character',
       settings: {showTypographicCharacters: true}, marks: [
@@ -340,15 +355,18 @@ read -r -d '' detection_cases <<'JS' || true
       await test.waitFor(() => JSON.stringify(highlights()) === JSON.stringify(expected),
         label + ': expected highlights ' + JSON.stringify(expected));
       test.assert(editor.getValue() === original, 'Detection must not edit the note');
-      for (let i = 0; i < scenario.marks.length; i++) {
-        const notice = scenario.marks[i].notice;
-        if (!notice) continue;
+      const inspections = [
+        ...scenario.marks.filter(mark => mark.notice).map(({line, ch, notice}) => ({line, ch, notice})),
+        ...scenario.inspections ?? [],
+      ];
+      for (const {line, ch, notice} of inspections) {
         const existing = new Set(document.querySelectorAll('.notice'));
-        editor.setCursor(editor.offsetToPos(expected[i].from));
+        editor.setCursor({line, ch});
         test.assert(app.commands.executeCommandById('gremlins:inspect-gremlin-at-cursor'), 'Inspect command is not registered');
-        await test.waitFor(() => Array.from(document.querySelectorAll('.notice'))
-          .some(element => !existing.has(element) && element.textContent === notice),
-          label + ': expected inspection notice ' + notice);
+        await test.waitFor(() => {
+          const notices = Array.from(document.querySelectorAll('.notice')).filter(element => !existing.has(element));
+          return notice === null ? notices.length === 0 : notices.some(element => element.textContent === notice);
+        }, label + ': expected inspection notice ' + JSON.stringify(notice) + ` at ${line}:${ch}`);
       }
       await test.waitFor(() => editor.getValue() === original && JSON.stringify(highlights()) === JSON.stringify(expected),
         label + ': detection and inspection must leave the document and highlights unchanged');
