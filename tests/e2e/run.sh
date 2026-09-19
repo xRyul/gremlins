@@ -138,8 +138,11 @@ cleanup() {
     })()" >/dev/null || cleanup_failed 'settings restoration failed; recovery snapshot retained'
     obsidian_eval "(async () => {
       const saved = $saved_state;
-      app.vault.setConfig('tabSize', saved.tabSize);
+      for (const [key, value] of Object.entries(saved.editorOptions)) app.vault.setConfig(key, value);
       app.workspace.updateOptions();
+      for (const [key, value] of Object.entries(saved.editorOptions)) {
+        if (app.vault.getConfig(key) !== value) throw Error('Editor option was not restored: ' + key);
+      }
       const leaf = app.workspace.getLeafById(saved.leafId);
       if (leaf) app.workspace.setActiveLeaf(leaf, {focus: true});
       return true;
@@ -202,7 +205,9 @@ saved_state=$(obsidian_eval "(async () => {
   const plugin = app.plugins.plugins.gremlins;
   if (typeof plugin.manifest.dir !== 'string') throw Error('Cannot locate the plugin data safely');
   const dataPath = plugin.manifest.dir + '/data.json';
-  return JSON.stringify({settings: plugin.settings, tabSize: app.vault.getConfig('tabSize'),
+  return JSON.stringify({settings: plugin.settings,
+    editorOptions: Object.fromEntries(['tabSize', 'showLineNumber', 'foldHeading', 'foldIndent', 'rightToLeft']
+      .map(key => [key, app.vault.getConfig(key)])),
     leafId: app.workspace.getMostRecentLeaf()?.id, dataPath,
     data: await app.vault.adapter.exists(dataPath) ? await app.vault.adapter.read(dataPath) : null});
 })()")
@@ -297,11 +302,16 @@ obsidian_eval "$application_helpers" >/dev/null
 if [[ ${1:-} == --fail-after-setup ]]; then
   obsidian_eval "(async () => {
     await window.__gremlinsE2E.openFixture('parent-child.md', 'live', {showAmbiguousEmptyListMarkers: true}, 8);
+    for (const key of ['showLineNumber', 'foldHeading', 'foldIndent', 'rightToLeft']) {
+      app.vault.setConfig(key, !app.vault.getConfig(key));
+    }
+    app.workspace.updateOptions();
     throw Error('Intentional E2E cleanup check');
   })()" >/dev/null
   fail 'The intentional application error was not detected'
 fi
 
+source tests/e2e/editor-layout.sh
 source tests/e2e/gremlin-icon.sh
 source tests/e2e/fix.sh
 source tests/e2e/detect.sh

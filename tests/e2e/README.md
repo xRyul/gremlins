@@ -21,6 +21,7 @@ tests/
 │   ├── check-cleanup.sh
 │   ├── detect.sh
 │   ├── fix.sh
+│   ├── editor-layout.sh
 │   ├── gremlin-icon.sh
 │   ├── editor-tooltip.sh
 │   ├── fixtures/
@@ -33,9 +34,10 @@ tests/
 | File | Responsibility |
 |---|---|
 | `run.sh` | Build/deployment, CLI transport, fixture reset, shared application helpers, waiting, diagnostics, locking and state restoration. Suites are sourced here; they do not implement their own lifecycle. |
-| `check-cleanup.sh` | Deliberately fail the runner and verify that files, settings, persisted data and the active tab are restored. |
+| `check-cleanup.sh` | Deliberately fail the runner and verify that files, settings, persisted data, editor options and the active tab are restored. |
 | `detect.sh` | Read-only detection: exact highlight ranges, grouping, severity, rule defaults/toggles, exclusions and cursor-inspection notices. Editor and saved contents must remain unchanged. Never invoke fixes. |
 | `fix.sh` | Command/gutter edits and no-op actions: complete resulting documents, preserved text, saved contents and remaining warnings. Highlights are preconditions, not repeated exact-range/style tests. |
+| `editor-layout.sh` | Rendered gutter placement, zero added layout width, line-number/folding coexistence and unchanged note contents. |
 | `gremlin-icon.sh` | Actual rendered icon identity, geometry, size, severity colours and accessibility labels. |
 | `editor-tooltip.sh` | Hover behaviour, tooltip appearance and prevention of duplicate tooltips. |
 | `fixtures/` | Committed Markdown inputs shared across suites. Settings and expected outcomes belong in scenario definitions, not in a second fixture-management system. |
@@ -61,7 +63,6 @@ These are destinations for future migrations, not a claim that the remaining cov
 | Existing file under `tests/` | Live destination |
 |---|---|
 | `settings.test.ts` | Application defaults and disabled-rule behaviour in the relevant detection/fixing scenarios, not a separate settings suite. |
-| `styles.test.ts` | Add `editor-layout.sh` when migrating: assert actual gutter positioning and layout, not CSS source strings. This suite does not exist yet. |
 
 `list-ending-fallback.test.ts` deliberately remains Node-only: a fully parsed live editor cannot exercise the no-parser branch. Ten input/expected-output vectors run through the parserless detector, whole-document detector and a real CodeMirror state without a language extension (three tests, 30 combinations). They also preserve match counts/order and simultaneous multi-line fix application. No parser classifications are injected.
 
@@ -73,7 +74,7 @@ These are destinations for future migrations, not a claim that the remaining cov
 - Each run copies them to the fixed `_gremlins_e2e/` folder through Obsidian's vault API. A fresh copy is restored before each scenario and editor mode.
 - This directory is reserved for tests. Existing directories must have the runner's ownership marker and contain only known fixtures; unknown files or symlinks are refused, not deleted.
 - Scenarios run sequentially. A vault-local `.gremlins-e2e-lock/` directory prevents simultaneous runners, including from other checkouts.
-- The runner saves plugin settings, the exact persisted `data.json` (including whether it existed), indent width and the active tab. It closes test tabs, removes its working directory and restores state after success, failure, Ctrl-C or SIGTERM. If restoration fails, the run fails and retains the lock/recovery snapshot rather than allowing another run against unrestored state.
+- The runner saves plugin settings, the exact persisted `data.json` (including whether it existed), editor options (indent width, line numbers, heading/list folding, text direction) and the active tab. It closes test tabs, removes its working directory and restores state after success, failure, Ctrl-C or SIGTERM. If restoration fails, the run fails and retains the lock/recovery snapshot rather than allowing another run against unrestored state.
 - Fixtures contain significant tabs and trailing spaces. Do not reformat them. Local EditorConfig/Git attributes protect whitespace and LF line endings; the tests also check important fixture bytes.
 - `line-endings-no-final-newline.md` deliberately has no final newline. Its EditorConfig exception and exact-byte assertion preserve that input; detection, combined punctuation/hard-break fixes and sibling separators must not append a newline.
 
@@ -126,6 +127,23 @@ A blank-line boundary must leave the second block's text untouched. After the fi
 Assertions recognize the custom mascot rather than a blank or built-in icon, check its 12–16 px size and viewBox fit, and retain the lightweight geometry limits (at most four paths, SVG body below 1 KB, no gradients/filters). Computed fill/stroke colours must follow the severity token, including when that token changes locally on the marker. The local style is restored without changing the vault theme. This replaces the literal source-transform check with rendered geometry checks and the source-code registration checks with actual rendering.
 
 `editor-tooltip.sh` owns character/structural/gutter hover behaviour: the existing Source-mode duplicate-tooltip checks plus ten boundary and eleven message-content scenarios in both Source mode and Live Preview (42 executions). It uses one hover executor, the runner's `waitFor()` helper and trusted CDP pointer movements. Exact gutter accessibility-label text belongs to `gremlin-icon.sh`; detection/inspection and fixing belong to `detect.sh` and `fix.sh`.
+
+## Editor-layout migration
+
+The two CSS-source tests formerly in `tests/styles.test.ts` are replaced by six layout scenarios in both Source mode and Live Preview, in left-to-right and right-to-left mode (24 executions) in `editor-layout.sh`. `editor-layout.md` contains a heading, a parent list item and a nested child, each with a genuine highlighted em dash. The suite measures the actual editor with Gremlins' gutter disabled, enabled and disabled again; it never edits the note.
+
+| Former CSS assertion | Live replacement |
+|---|---|
+| `min-width: 18px` | The rendered Gremlins column is 18 px wide and its visible markers fit inside it. |
+| `margin-inline-end: -18px` | Enabling the gutter adds zero width to the gutter container and leaves every line and the editor content at the same position and size. |
+| `inset-inline-start: -18px` and `position: relative` | The real column sits 18 px before the gutter origin without moving the text; the folding-only case is checked separately. Equivalent CSS implementations are allowed. |
+| `order: -1` | With native line numbers enabled, Gremlins is physically before them, with no overlap or change to the line-number column. |
+| Folding-only `-(--file-folding-offset + 8px)` | With line numbers off and folding on, 24 px and 40 px tokens produce 32 px and 48 px offsets. Making the token unavailable explicitly exercises the 24 px fallback. |
+| Lone-gutter `margin-inline: 0` | Without line numbers, adding Gremlins keeps the gutter container at zero width and the editor unchanged, both with and without folding. |
+
+Real line-number, heading/list-folding and text-direction settings are toggled, not CSS classes standing in for those options. Inline-start/end measurements follow the actual text direction. With native line numbers present, the 24 px folding gap must remain intact even before enabling Gremlins, so an over-broad lone-gutter reset cannot corrupt both the baseline and enabled state unnoticed. Measurements wait for stable geometry and allow 0.5 CSS px for subpixel rounding. The native heading fold control must remain in place without overlapping a Gremlin marker; all three markers must stay on their warning lines. Disabling the gutter restores content, line, line-number, gutter and fold-control bounds. Editor text and persisted bytes remain unchanged.
+
+Folding-token overrides are local to the disposable editor and restored in `finally`, as are the layout options. The shared runner also snapshots those options for interruption recovery; `test:cleanup` deliberately changes them before throwing and checks their restoration.
 
 ## Presentation migration
 
@@ -237,4 +255,4 @@ These tests assert rendered ranges, notices and unchanged editor/saved content, 
 
 Failures save the current test note, rendered DOM, syntax tree, evaluation error and captured application/console errors to `test-results/e2e-failure.txt` **before** removing fixtures. This ignored report retains the most recent failure, even after a subsequent successful run. `npm run test:cleanup` also writes its expected-failure log there.
 
-A forced kill or Obsidian crash can prevent cleanup. Do not blindly delete a lock while another runner is active. Once you have confirmed the runner has stopped, inspect `.gremlins-e2e-lock/state.json`: `settings` and `tabSize` contain the saved application options, while `dataPath` and `data` contain the original persisted plugin data (`null` means the file did not exist). Restore them if necessary, remove only `eval.js` and `state.json` from that lock directory, then remove the empty lock directory. The next run safely resets an owned `_gremlins_e2e/` folder. If ownership or file checks fail, inspect the folder rather than bypassing the guard.
+A forced kill or Obsidian crash can prevent cleanup. Do not blindly delete a lock while another runner is active. Once you have confirmed the runner has stopped, inspect `.gremlins-e2e-lock/state.json`: `settings` and `editorOptions` contain the saved application options, while `dataPath` and `data` contain the original persisted plugin data (`null` means the file did not exist). Restore them if necessary, remove only `eval.js` and `state.json` from that lock directory, then remove the empty lock directory. The next run safely resets an owned `_gremlins_e2e/` folder. If ownership or file checks fail, inspect the folder rather than bypassing the guard.
