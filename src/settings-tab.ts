@@ -99,13 +99,14 @@ export class GremlinsSettingTab extends PluginSettingTab {
     new Setting(containerEl)
       .setName('List item punctuation')
       .setDesc(
-        'Highlight inconsistent punctuation within each list while preserving meaningful sentence endings and display math. The period policy skips standalone wikilinks, single-token all-caps labels, and unpunctuated items that introduce nested lists. Automatic matching infers each list independently.',
+        'Highlight punctuation that differs from the selected style. By list type uses no terminal punctuation for bullets and periods for numbered items (punctuation only, not a grammar check). Meaningful sentence endings and display math are preserved. Periods skip standalone wikilinks, single-token all-caps labels, and unpunctuated nested-list parents. Automatic matching infers each list independently.',
       )
       .addDropdown((dropdown) =>
         dropdown
           .addOptions({
             disabled: 'Disabled',
             consistent: 'Match each list automatically',
+            'by-list-type': 'By list type (GOV.UK-inspired)',
             none: 'No terminal punctuation',
             period: 'Period',
             semicolon: 'Semicolon',

@@ -250,6 +250,21 @@ read -r -d '' fix_cases <<'JS' || true
       ]},
     // List-item punctuation edits: full documents and saved bytes, not helper return values.
     ...[
+      {name: 'fix punctuation by each list marker without changing nesting or checkboxes', file: 'punctuation-by-list-type.md', policy: 'by-list-type', steps: [
+        {line: 0, marks: {'list-item-punctuation': '.'}, fixed: {0: '- Bullet'}},
+        {line: 1, marks: {'list-item-punctuation': ';'}, fixed: {1: '+ [ ] Task'}},
+        {line: 2, marks: {'list-item-punctuation': ','}, fixed: {2: '* Other'}},
+        {line: 5, marks: {'list-item-punctuation': '.'}, fixed: {5: '    - Child'}},
+        {line: 7, marks: {'list-item-punctuation': 't'}, fixed: {7: '    1) Submit.'}},
+        {line: 8, marks: {'list-item-punctuation': ';'}, fixed: {8: '3. Finish.'}},
+        {line: 10, marks: {'list-item-punctuation': ';'}, fixed: {10: '> 1. Start.'}},
+        {line: 11, marks: {'list-item-punctuation': '.'}, fixed: {11: '>     - Child'}},
+      ]},
+      {name: 'marker-aware punctuation never fixes ordered-item exemptions', file: 'punctuation-by-list-type-exemptions.md', policy: 'by-list-type', noFix: true,
+        steps: [0, 1, 6, 8].map(line => ({line, marks: {'list-item-punctuation': ''}}))},
+      {name: 'marker-aware punctuation fixes only the final content line', file: 'punctuation-multiline.md', policy: 'by-list-type', steps: [
+        {line: 1, marks: {'list-item-punctuation': '.'}, fixed: {1: '  continues'}},
+      ]},
       {name: 'punctuate only the final multiline content', file: 'punctuation-multiline.md', steps: [
         {line: 3, marks: {'list-item-punctuation': 's'}, fixed: {3: '  continues.'}},
       ]},
@@ -296,7 +311,7 @@ read -r -d '' fix_cases <<'JS' || true
     ].map(({policy = 'period', ...scenario}) => ({
       ...scenario, settings: {listItemPunctuationPolicy: policy},
     })),
-    ...['consistent', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
+    ...['consistent', 'by-list-type', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
       name: 'formula is never punctuated under ' + policy, file: 'punctuation-math-only.md', noFix: true,
       settings: {listItemPunctuationPolicy: policy, listItemLineEndingPolicy: 'two-spaces'},
       steps: [0, 1, 2, 3].map(line => ({line, marks: {'list-item-punctuation': '', 'list-item-line-ending': ''}})),

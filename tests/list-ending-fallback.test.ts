@@ -34,6 +34,17 @@ const scenarios = [
     fixed: '- One\n- Two\n- Three',
   },
   {
+    name: 'punctuation by list type with ordered exemptions',
+    text: '- Bullet.\n+ [ ] Task;\n* Other,\n1. Parent:\n    - Child.\n2. Parent\n    1) Submit\n3. [[Note]]\n4. API\n5. Finish;',
+    settings: { listItemPunctuationPolicy: 'by-list-type' },
+    warnings: [
+      [0, 'list-item-punctuation', '', 1], [1, 'list-item-punctuation', '', 1],
+      [2, 'list-item-punctuation', '', 1], [4, 'list-item-punctuation', '', 1],
+      [6, 'list-item-punctuation', '.', 1], [9, 'list-item-punctuation', '.', 1],
+    ],
+    fixed: '- Bullet\n+ [ ] Task\n* Other\n1. Parent:\n    - Child\n2. Parent\n    1) Submit.\n3. [[Note]]\n4. API\n5. Finish.',
+  },
+  {
     name: 'formal punctuation', text: '- One.\n- Two\n- Three;',
     settings: { listItemPunctuationPolicy: 'semicolon-final-period' },
     warnings: [[0, 'list-item-punctuation', ';', 1], [1, 'list-item-punctuation', ';', 1], [2, 'list-item-punctuation', '.', 1]],

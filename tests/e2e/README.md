@@ -116,7 +116,7 @@ Two files intentionally remain outside E2E. They are four Node tests, not unfini
 
 | File | Why it stays in Node |
 |---|---|
-| [list-ending-fallback.test.ts](../list-ending-fallback.test.ts) | Ten input/output vectors run through parserless detection, whole-document detection and a real CodeMirror state without a language extension: three tests, 30 combinations. They check unavailable syntax, warning counts/order and simultaneous multi-line fixes. The live runner waits for complete parsing and therefore does not exercise this fallback. No parser classifications are injected. |
+| [list-ending-fallback.test.ts](../list-ending-fallback.test.ts) | Eleven input/output vectors run through parserless detection, whole-document detection and a real CodeMirror state without a language extension: three tests, 33 combinations. They check unavailable syntax, warning counts/order and simultaneous multi-line fixes. The live runner waits for complete parsing and therefore does not exercise this fallback. No parser classifications are injected. |
 | [code-point-format.test.ts](../code-point-format.test.ts) | One assertion preserves the five-digit `U+1F47E` representation. No currently detected character is outside the Basic Multilingual Plane, so there is no real hover/inspection path for it. Supported-character padding and uppercase formatting are tested live. |
 
 Running these helpers through `obsidian eval` would relocate the unit tests, not make them E2E. Keep them as explicit internal contracts; do not inject character definitions or fake matches to manufacture a UI path.

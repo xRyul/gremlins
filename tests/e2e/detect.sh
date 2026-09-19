@@ -218,6 +218,16 @@ read -r -d '' detection_cases <<'JS' || true
     })),
     // Punctuation expectations come from the actual editor and inspection command.
     ...[
+      {name: 'punctuation follows each list marker, including tasks and nested lists', file: 'punctuation-by-list-type.md', policy: 'by-list-type', marks: [
+        {line: 0, ch: 8, text: '.', notice: 'List item punctuation · Expected no terminal punctuation at the end of this item · Warning'},
+        {line: 1, ch: 10, text: ';'}, {line: 2, ch: 7, text: ','},
+        {line: 5, ch: 11, text: '.'},
+        {line: 7, ch: 12, text: 't', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
+        {line: 8, ch: 9, text: ';'}, {line: 10, ch: 10, text: ';'}, {line: 11, ch: 13, text: '.'},
+      ]},
+      {name: 'marker-aware punctuation preserves ordered-item exemptions', file: 'punctuation-by-list-type-exemptions.md', policy: 'by-list-type', marks: []},
+      {name: 'mixed list punctuation stays disabled by default', file: 'punctuation-by-list-type.md', policy: 'disabled', marks: []},
+      {name: 'marker-aware punctuation checks the final content line', file: 'punctuation-multiline.md', policy: 'by-list-type', marks: [{line: 1, ch: 11, text: '.'}]},
       {name: 'infer punctuation independently for each list', file: 'punctuation-inference.md', policy: 'consistent', marks: [
         {line: 1, ch: 7, text: 'd', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
         {line: 5, ch: 8, text: 'd', notice: 'List item punctuation · Expected a semicolon (;) at the end of this item · Warning'},
@@ -230,7 +240,7 @@ read -r -d '' detection_cases <<'JS' || true
         {line: 1, ch: 7, text: 'd', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
       ]},
       {name: 'questions and exclamations do not drive inference', file: 'punctuation-semantic-inference.md', policy: 'consistent', marks: []},
-      ...['consistent', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
+      ...['consistent', 'by-list-type', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
         name: 'preserve meaningful sentence endings under ' + policy, file: 'punctuation-sentence-endings.md', policy, marks: [],
       })),
       {name: 'multiline display math does not drive inference', file: 'punctuation-math.md', policy: 'consistent', marks: []},
@@ -258,7 +268,7 @@ read -r -d '' detection_cases <<'JS' || true
         {line: 1, ch: 155, text: ']', notice: 'List item punctuation · Expected a period (.) at the end of this item · Warning'},
       ]},
       {name: 'highlight the whole final astral code point', file: 'punctuation-astral.md', marks: [{line: 0, ch: 2, text: '👾'}]},
-      ...['consistent', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
+      ...['consistent', 'by-list-type', 'none', 'period', 'semicolon', 'semicolon-final-period'].map(policy => ({
         name: 'multiline formula is exempt under ' + policy, file: 'punctuation-math-only.md', policy, marks: [],
       })),
       {name: 'prose after a formula still needs punctuation', file: 'punctuation-math-prose.md', marks: [{line: 4, ch: 7, text: 't'}]},

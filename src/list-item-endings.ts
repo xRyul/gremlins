@@ -71,11 +71,16 @@ export function detectListItemEndingGremlins(
 
 function detectPunctuationGremlins(
   groups: readonly ListGroup[],
-  policy: Exclude<ListItemPunctuationPolicy, 'disabled'>,
+  selectedPolicy: Exclude<ListItemPunctuationPolicy, 'disabled'>,
 ) {
   const matches: ListItemPunctuationGremlinMatch[] = [];
 
   for (const group of groups) {
+    let policy = selectedPolicy;
+    if (policy === 'by-list-type') {
+      const style = group.items[0]?.style;
+      policy = style === '.' || style === ')' ? 'period' : 'none';
+    }
     const items = group.items.filter(
       (item): item is ListItem & { endpoint: ItemEndpoint } =>
         item.endpoint !== null,
@@ -116,7 +121,7 @@ function detectPunctuationGremlins(
 
 function isPunctuationExempt(
   item: ListItem & { endpoint: ItemEndpoint },
-  policy: Exclude<ListItemPunctuationPolicy, 'disabled'>,
+  policy: Exclude<ListItemPunctuationPolicy, 'disabled' | 'by-list-type'>,
 ) {
   const punctuation = terminalPunctuation(item.endpoint).value;
   const isUnpunctuatedMarkerLineParent =
@@ -171,7 +176,7 @@ function endsWithDisplayMath(endpoint: ItemEndpoint) {
 
 function expectedPunctuation(
   items: readonly (ListItem & { endpoint: ItemEndpoint })[],
-  policy: Exclude<ListItemPunctuationPolicy, 'disabled'>,
+  policy: Exclude<ListItemPunctuationPolicy, 'disabled' | 'by-list-type'>,
 ) {
   if (policy === 'period') {
     return items.map(() => '.');

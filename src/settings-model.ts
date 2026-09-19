@@ -1,6 +1,7 @@
 export type ListItemPunctuationPolicy =
   | 'disabled'
   | 'consistent'
+  | 'by-list-type'
   | 'none'
   | 'period'
   | 'semicolon'
