@@ -4,6 +4,78 @@
 # text/block boundaries, combined fixes, no-ops and remaining warnings. Highlights
 # are preconditions here; exact ranges, styling and inspection belong in detect.sh.
 # Sourced by run.sh, which owns fixture isolation, CLI transport and cleanup.
+read -r -d '' note_fix_cases <<'JS' || true
+(() => {
+  const test = window.__gremlinsE2E;
+  const combined = {
+    file: 'fix-note.md',
+    settings: {showListIndentation: true, showDuplicateListMarkers: true, showListMarkerSpacing: true,
+      showTypographicCharacters: true, listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'},
+    expected: 'Before 👾\n\n- Parent -\n    - Child.  \n- Second.  \n\n```md\n- -  Literal\n```\n\nAfter\n',
+  };
+  test.noteFixCases = [
+    {name: 'overlapping block fixes and newly exposed list rules', ...combined},
+    {name: 'unsaved gremlins outside the viewport', ...combined, offscreen: true},
+    {name: 'line separators preserve subsequent offsets', file: 'fix-separators.md',
+      expected: 'Before\na\nb\nc\n\nd\nAfter\n'},
+    {name: 'mixed indentation on every line', file: 'fix-mixed-tabs.md',
+      expected: '\t- Item\n\t\t- Item\n\t\t- Item\n\t\t- Item\n'},
+    {name: 'current editor indentation width', file: 'fix-mixed-width.md', tabSize: 2,
+      expected: 'Before\n  Item\nAfter\n'},
+    {name: 'punctuation and Unicode trailing spaces', file: 'line-endings-unicode.md',
+      settings: {listItemPunctuationPolicy: 'period', listItemLineEndingPolicy: 'two-spaces'},
+      expected: '- Item.  \n- Item.  \n- Item.  \n'},
+    {name: 'sibling separators preserve EOF', file: 'line-endings-no-final-newline.md',
+      settings: {listItemLineEndingPolicy: 'blank-line'}, expected: '- First\n\n- Second'},
+    {name: 'ambiguous empty marker', file: 'root-siblings.md',
+      settings: {showAmbiguousEmptyListMarkers: true}, expected: '- Previous item\n- \n- Following item\n'},
+    {name: 'missing marker uses the existing heuristic', file: 'tabbed-missing-list-marker.md',
+      settings: {showMissingListMarkers: true},
+      expected: '\t- Parent\n\t\t- Previous item\n\t\t\t* Missing item\n\t\t\t* Following item\n'},
+    {name: 'typographic rule stays disabled by default', file: 'typographic-punctuation.md'},
+    {name: 'disabled character rule stays disabled', file: 'fix-separators.md', settings: {showDangerousCharacters: false}},
+    {name: 'clean note and unsupported character are unchanged', file: 'fix-unknown-character.md'},
+  ];
+  test.runNoteFixCase = async (index, mode) => {
+    const scenario = test.noteFixCases[index];
+    const label = `${mode}/note command: ${scenario.name}`;
+    await test.openFixture(scenario.file, mode, {showGutterIcons: false, ...scenario.settings}, scenario.tabSize ?? 4);
+    const editor = test.leaf.view.editor;
+    test.assert(app.plugins.plugins.gremlins.settings.enableClickToFix === false, 'Note command must not require gutter-click fixing');
+    const prefix = scenario.offscreen ? 'Unchanged prose\n\n'.repeat(400) : '';
+    const original = prefix + test.fixtures[scenario.file];
+    const expected = prefix + (scenario.expected ?? test.fixtures[scenario.file]);
+    if (scenario.offscreen) {
+      editor.setValue(original);
+      editor.setCursor({line: 0, ch: 0});
+      editor.scrollTo(0, 0);
+      await test.waitFor(() => editor.cm.viewport.to < prefix.length, label + ': gremlins outside viewport');
+    }
+    test.assert(app.commands.executeCommandById('gremlins:fix-current-note'), label + ': command not registered');
+    await test.waitFor(() => editor.getValue() === expected, label + ': expected ' + JSON.stringify(expected));
+    await test.leaf.view.save();
+    test.assert(await app.vault.read(test.leaf.view.file) === expected, label + ': saved content');
+    app.commands.executeCommandById('gremlins:fix-current-note');
+    test.assert(editor.getValue() === expected, label + ': second run must be a no-op');
+    if (original !== expected) {
+      editor.undo();
+      await test.waitFor(() => editor.getValue() === original, label + ': one undo restores the entire note');
+    }
+    return 'PASS: ' + label;
+  };
+  return test.noteFixCases.length;
+})()
+JS
+note_case_count=$(obsidian_eval "$note_fix_cases")
+[[ $note_case_count =~ ^[1-9][0-9]*$ ]] || fail "Invalid note-fix scenario count: $note_case_count"
+for mode in source live; do
+  for ((index = 0; index < note_case_count; index++)); do
+    result=$(obsidian_eval "window.__gremlinsE2E.runNoteFixCase($index, '$mode')")
+    [[ $result == 'PASS: '* ]] || fail "Unexpected note-fix result: $result"
+    printf '%s\n' "$result"
+  done
+done
+
 read -r -d '' fix_cases <<'JS' || true
 (() => {
   const test = window.__gremlinsE2E;

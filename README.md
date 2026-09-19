@@ -118,7 +118,7 @@ When fixed, Gremlins normalizes only the selected line-ending behavior. The fina
 The plugin does **not automatically replace anything**:
 
 - **Click gutter icons to fix** is disabled by default.
-- Without it, Gremlins only highlights and explains characters or list-formatting inconsistencies.
+- Run **Gremlins: Fix all in current note** from the command palette to fix the entire active note using your enabled rules. It works in Source mode and Live Preview, does not require gutter-click fixing, and can be undone in one step.
 
 
 ## Testing
