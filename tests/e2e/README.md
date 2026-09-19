@@ -60,11 +60,12 @@ These are destinations for future migrations, not a claim that the remaining cov
 
 | Existing file under `tests/` | Live destination |
 |---|---|
-| `presentation.test.ts` | Actual inspection notices, tooltip content or icon severity, according to the visible output being checked. |
 | `settings.test.ts` | Application defaults and disabled-rule behaviour in the relevant detection/fixing scenarios, not a separate settings suite. |
 | `styles.test.ts` | Add `editor-layout.sh` when migrating: assert actual gutter positioning and layout, not CSS source strings. This suite does not exist yet. |
 
 `list-ending-fallback.test.ts` deliberately remains Node-only: a fully parsed live editor cannot exercise the no-parser branch. Ten input/expected-output vectors run through the parserless detector, whole-document detector and a real CodeMirror state without a language extension (three tests, 30 combinations). They also preserve match counts/order and simultaneous multi-line fix application. No parser classifications are injected.
+
+`code-point-format.test.ts` retains only the supplementary-code-point formatting assertion (`U+1F47E`). None of Gremlins' detected characters is outside the BMP, so this contract has no real hover/inspection path. Padding and uppercase formatting for supported characters are checked live; no character definitions or match objects are injected to make the supplementary case appear reachable.
 
 ## Fixtures and isolation
 
@@ -80,7 +81,7 @@ The runner uses a short CLI `eval` call to read temporary JavaScript from the lo
 
 ## Coverage
 
-`detect.sh` is the read-only detection suite: 151 scenarios in both Source mode and Live Preview (302 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, match-position, Markdown-context, list-marker-cleanup and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
+`detect.sh` is the read-only detection suite: 152 scenarios in both Source mode and Live Preview (304 executions). It covers the user-visible behaviour from the former detection, ambiguous-empty-list-marker, match-position, presentation, Markdown-context, list-marker-cleanup and list-item-endings unit tests plus regressions moved out of the tooltip suite. All rules use the same detection executor; no detector functions or fabricated parser classifications are used:
 
 - Unicode grouping, NBSP, typographic defaults/toggles, severity and zero-width styling.
 - Cursor inspection at opening/closing boundaries, zero-width characters and adjacent gremlins, including no notice outside a match.
@@ -120,11 +121,35 @@ The old synthetic first-line ambiguous match had no preceding list item. `fix-or
 
 A blank-line boundary must leave the second block's text untouched. After the first block is dedented, Obsidian can parse that untouched second block as a valid child list, so the test does not invent a remaining orphan warning.
 
-`gremlin-icon.sh` replaces both checks in `tests/gremlin-icon.test.ts` with 12 live executions: error/warning/info icons, passive/interactive gutters, and both editor modes. It reuses the Unicode and typographic fixtures and inspects the actual SVG inserted by Obsidian, excluding CodeMirror's invisible spacer.
+`gremlin-icon.sh` covers the former icon tests and presentation severity selection with 20 live executions: error/warning/info icons, mixed-severity precedence, passive/interactive gutters, and both editor modes. It reuses the Unicode and single-dash tooltip fixtures plus two single-line mixed-severity fixtures and inspects the actual SVG inserted by Obsidian, excluding CodeMirror's invisible spacer. The precedence cases first verify the character severities present, then require error over info/warning, warning over info, and info for a single info match.
 
 Assertions recognize the custom mascot rather than a blank or built-in icon, check its 12–16 px size and viewBox fit, and retain the lightweight geometry limits (at most four paths, SVG body below 1 KB, no gradients/filters). Computed fill/stroke colours must follow the severity token, including when that token changes locally on the marker. The local style is restored without changing the vault theme. This replaces the literal source-transform check with rendered geometry checks and the source-code registration checks with actual rendering.
 
-`editor-tooltip.sh` owns character/gutter hover behaviour: the existing Source-mode duplicate-tooltip checks plus ten boundary scenarios in both Source mode and Live Preview (20 boundary executions). It uses the runner's `waitFor()` helper and trusted CDP pointer movements. Exact gutter accessibility-label text belongs to `gremlin-icon.sh`; detection/inspection and fixing belong to `detect.sh` and `fix.sh`.
+`editor-tooltip.sh` owns character/structural/gutter hover behaviour: the existing Source-mode duplicate-tooltip checks plus ten boundary and eleven message-content scenarios in both Source mode and Live Preview (42 executions). It uses one hover executor, the runner's `waitFor()` helper and trusted CDP pointer movements. Exact gutter accessibility-label text belongs to `gremlin-icon.sh`; detection/inspection and fixing belong to `detect.sh` and `fix.sh`.
+
+## Presentation migration
+
+The 12 checks formerly in `tests/presentation.test.ts` are covered by live inspection, hover content and gutter severity, except for the single supplementary-code-point assertion retained in `code-point-format.test.ts`. This adds one detection scenario, eleven hover-content scenarios and two icon scenarios (32 live executions), extending existing executors rather than introducing a presentation suite.
+
+| Original assertion | Replacement coverage |
+|---|---|
+| Code-point padding/case: `U+000B`, `U+200B` | Real inspection notices and hover text from `fix-separators.md` and `zero-width-spaces.md`; leading zeros and uppercase hexadecimal are compared exactly. |
+| Five-digit `U+1F47E` is not truncated | Focused Node formatter contract: the plugin does not detect this emoji, so a live formatting assertion would require a fabricated match. |
+| Grouped character count/plural and error label | `zero-width-spaces.md`: exact `2 zero-width spaces · Unicode U+200B · Error` hover and inspection text. |
+| Mixed indentation description without a code point | `mixed-indentation.md`: exact hover text and existing inspection notice. |
+| Two-space malformed child description | `misaligned-leaf.md`: exact `2 leading spaces` hover text; the existing two-space case in `list-indent-width.md` also checks its inspection notice. |
+| Orphaned marker description | `root-list-indentation.md`: hover the four-space root and compare the complete orphan-specific warning; existing inspection coverage remains. |
+| Missing marker description | `missing-list-marker.md`: exact hover text and existing inspection notice. |
+| Ambiguous empty marker description | `parent-child.md`: exact hover text explaining the missing space and potential heading interpretation. |
+| Duplicate marker description | `duplicate-markers.md`: exact hover text and existing inspection notice. |
+| Marker spacing description | `list-marker-spacing.md`: exact hover text and existing inspection notice. |
+| Expected semicolon description | `punctuation-formal.md`: exact semicolon-specific hover text and existing inspection notice. |
+| Expected hard-break description | `line-endings-hard-break.md`: exact two-trailing-spaces hover text and existing inspection notice. |
+| Severity selection for `[info, error, warning]`, `[info, warning]`, `[info]` | `gutter-mixed-severities.md`, `gutter-warning-info.md` and `tooltips.md`: exact character severity vectors, actual gutter class and computed colour, in passive/interactive states and both editor modes. |
+
+Hover content is compared in full, including punctuation, Unicode labels, severity capitalization and the absence of Unicode text for structural rules. All suites preserve editor and saved contents. Content cases require a trusted pointer on the intended source line; boundary cases additionally retain their exact offset/side assertions. Adjacent zero-width characters can share a pixel, so a content hover may resolve inside the grouped match rather than at its first offset.
+
+`misaligned-leaf.md` has a real parent and a two-space leaf item. In the existing multi-child fixture, Obsidian's fold control covers that indentation and receives the pointer instead of the warning. The leaf fixture makes the same warning directly hoverable without hiding controls or injecting a tooltip.
 
 ## Match-position migration
 

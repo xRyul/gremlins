@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Responsibilities: actual character/gutter hover tooltips, without duplicate tooltips.
+# Responsibilities: actual character/structural/gutter hover content, without duplicate tooltips.
 # Accessible label content belongs in gremlin-icon.sh; rule detection/fixes in their suites.
 # Sourced by run.sh; fixture lifecycle, CLI transport and waiting are shared.
 
@@ -109,12 +109,44 @@ read -r -d '' hover_cases <<'JS' || true
     {name: 'adjacent visible-width gremlins from the left', line: 3, ch: 2, side: -1, tooltip: nbsp},
     {name: 'adjacent visible-width gremlins from the right', line: 3, ch: 2, side: 1,
       tooltip: 'figure space · Unicode U+2007 · Warning'},
-  ];
+    {name: 'grouped character message', file: 'zero-width-spaces.md', line: 0, ch: 1,
+      tooltip: '2 zero-width spaces · Unicode U+200B · Error'},
+    {name: 'padded uppercase control-character code point', file: 'fix-separators.md', line: 1, ch: 1,
+      tooltip: 'line tabulation · Unicode U+000B · Warning'},
+    {name: 'mixed indentation message', file: 'mixed-indentation.md', line: 0, ch: 0,
+      tooltip: 'Mixed indentation · Leading indentation contains both tabs and spaces · Warning'},
+    {name: 'two-space misaligned child message', file: 'misaligned-leaf.md', line: 1, ch: 0,
+      settings: {showListIndentation: true},
+      tooltip: 'List indentation · 2 leading spaces do not match the configured indent width · Warning'},
+    {name: 'four-space orphaned list message', file: 'root-list-indentation.md', line: 6, ch: 0,
+      settings: {showListIndentation: true},
+      tooltip: 'List indentation · Indented list marker has no parent list item · Warning'},
+    {name: 'missing list marker message', file: 'missing-list-marker.md', line: 2, ch: 0,
+      settings: {showMissingListMarkers: true},
+      tooltip: 'Missing list marker · Line appears to be a sibling of the following list item · Warning'},
+    {name: 'ambiguous empty marker message', file: 'parent-child.md', line: 1, ch: 4,
+      settings: {showAmbiguousEmptyListMarkers: true},
+      tooltip: 'Ambiguous empty list marker · Missing space may cause Obsidian to parse the preceding line as a heading · Warning'},
+    {name: 'duplicate marker message', file: 'duplicate-markers.md', line: 2, ch: 0,
+      settings: {showDuplicateListMarkers: true},
+      tooltip: 'Duplicate list marker · Consecutive unordered markers may create an unintended nested list · Warning'},
+    {name: 'marker spacing message', file: 'list-marker-spacing.md', line: 0, ch: 1,
+      settings: {showListMarkerSpacing: true},
+      tooltip: 'List marker spacing · Marker is not followed by exactly one ordinary space · Warning'},
+    {name: 'semicolon expectation message', file: 'punctuation-formal.md', line: 0, ch: 7,
+      settings: {listItemPunctuationPolicy: 'semicolon-final-period'},
+      tooltip: 'List item punctuation · Expected a semicolon (;) at the end of this item · Warning'},
+    {name: 'hard-break expectation message', file: 'line-endings-hard-break.md', line: 0, ch: 5,
+      settings: {listItemLineEndingPolicy: 'two-spaces'},
+      tooltip: 'List item line ending · Expected exactly two trailing spaces (Markdown hard break) · Warning'},
+  ].map(scenario => ({file: 'character-boundaries.md', ...scenario}));
   test.prepareHoverCase = async (index, mode) => {
     const scenario = test.hoverCases[index];
-    await test.openFixture('character-boundaries.md', mode, {}, 4, scenario.line);
+    await test.openFixture(scenario.file, mode, scenario.settings ?? {}, 4, scenario.line);
     const editor = test.leaf.view.editor, cm = editor.cm;
     const pos = editor.posToOffset(scenario);
+    // Keep Markdown delimiters visible in Live Preview when hovering structural warnings.
+    editor.setCursor({line: scenario.line, ch: scenario.ch});
     const before = cm.coordsAtPos(pos);
     const boundary = Math.round(before.left);
     const transform = cm.contentDOM.style.transform;
@@ -138,13 +170,19 @@ read -r -d '' hover_cases <<'JS' || true
     const {scenario, cm, pos, transform, observe, pointer, label} = test.hoverState;
     const tooltips = () => Array.from(document.querySelectorAll('.gremlins-tooltip'), element => element.textContent);
     try {
-      test.assert(pointer?.trusted && pointer.position === pos && pointer.side === scenario.side,
-        label + ': pointer missed the intended boundary/side: ' + JSON.stringify(pointer));
+      test.assert(pointer?.trusted && pointer.position !== null &&
+        test.leaf.view.editor.offsetToPos(pointer.position).line === scenario.line,
+        label + ': pointer missed the intended editor line: ' + JSON.stringify(pointer));
+      // Content cases can resolve within a grouped match; boundary cases must hit the exact side/offset.
+      if (scenario.side !== undefined) {
+        test.assert(pointer.position === pos && pointer.side === scenario.side,
+          label + ': pointer missed the intended boundary/side: ' + JSON.stringify(pointer));
+      }
       const expected = scenario.tooltip === null ? [] : [scenario.tooltip];
       await test.waitFor(() => JSON.stringify(tooltips()) === JSON.stringify(expected),
         label + ': expected tooltip ' + JSON.stringify(expected));
       test.assert(!document.querySelector('body > .tooltip'), 'Duplicate Obsidian tooltip');
-      const original = test.fixtures['character-boundaries.md'];
+      const original = test.fixtures[scenario.file];
       test.assert(test.leaf.view.editor.getValue() === original, 'Hover must not edit the note');
       await test.leaf.view.save();
       test.assert(await app.vault.read(test.leaf.view.file) === original, 'Hover must not change the saved note');
@@ -173,4 +211,4 @@ for mode in source live; do
     printf '%s\n' "$result"
   done
 done
-printf 'PASS: %s hover-boundary scenarios in real Obsidian.\n' "$((hover_count * 2))"
+printf 'PASS: %s hover-boundary/content scenarios in real Obsidian.\n' "$((hover_count * 2))"

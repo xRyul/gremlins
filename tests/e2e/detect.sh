@@ -24,6 +24,12 @@ read -r -d '' detection_cases <<'JS' || true
         notice: '2 zero-width spaces · Unicode U+200B · Error'}]},
     {name: 'non-breaking space', file: 'non-breaking-space.md', kind: 'character',
       marks: [{line: 0, ch: 1, text: '\u00a0', notice: 'non-breaking space · Unicode U+00A0 · Warning'}]},
+    {name: 'control-character code point uses four uppercase hexadecimal digits', file: 'fix-separators.md', kind: 'character',
+      marks: [
+        {line: 1, ch: 1, text: '\u000b', zeroWidth: true, notice: 'line tabulation · Unicode U+000B · Warning'},
+        {line: 1, ch: 3, text: '\u2028', severity: 'error', zeroWidth: true},
+        {line: 1, ch: 5, text: '\u2029', severity: 'error', zeroWidth: true},
+      ]},
     {name: 'cursor inspection at character boundaries and adjacent gremlins', file: 'character-boundaries.md', kind: 'character',
       marks: [
         {line: 0, ch: 1, text: '\u00a0'},
@@ -74,7 +80,10 @@ read -r -d '' detection_cases <<'JS' || true
       settings: {showListIndentation: true}, marks: [{line: 4, ch: 0, text: '             ',
         notice: 'List indentation · 13 leading spaces do not match the configured indent width · Warning'}]},
     {name: 'child alignment at indent width 4', file: 'list-indent-width.md', kind: 'list-indentation',
-      settings: {showListIndentation: true}, marks: [{line: 1, ch: 0, text: '  '}, {line: 2, ch: 0, text: '   '}]},
+      settings: {showListIndentation: true}, marks: [
+        {line: 1, ch: 0, text: '  ', notice: 'List indentation · 2 leading spaces do not match the configured indent width · Warning'},
+        {line: 2, ch: 0, text: '   '},
+      ]},
     {name: 'child alignment at indent width 2', file: 'list-indent-width.md', kind: 'list-indentation', tabSize: 2,
       settings: {showListIndentation: true}, marks: [{line: 2, ch: 0, text: '   '}]},
     {name: 'indented prose, quote and non-list code', file: 'indented-non-list.md', kind: 'list-indentation',

@@ -6,12 +6,16 @@ read -r -d '' icon_cases <<'JS' || true
   test.iconCases = [
     {file: 'zero-width-spaces.md', text: '\u200b\u200b', severity: 'error', color: '--text-error'},
     {file: 'non-breaking-space.md', text: '\u00a0', severity: 'warning', color: '--color-orange'},
-    {file: 'typographic-punctuation.md', text: '“”–—', severity: 'info', color: '--color-blue',
+    {file: 'tooltips.md', text: '—', severities: ['info'], severity: 'info', color: '--color-blue',
       settings: {showTypographicCharacters: true}},
+    {file: 'gutter-mixed-severities.md', text: '—\u200b\u00a0', severities: ['info', 'error', 'warning'],
+      severity: 'error', color: '--text-error', settings: {showTypographicCharacters: true}},
+    {file: 'gutter-warning-info.md', text: '—\u00a0', severities: ['info', 'warning'],
+      severity: 'warning', color: '--color-orange', settings: {showTypographicCharacters: true}},
   ];
   test.runIconCase = async (index, mode, interactive) => {
     const scenario = test.iconCases[index];
-    const label = `${mode}/${interactive ? 'interactive' : 'passive'}: ${scenario.severity} gutter icon`;
+    const label = `${mode}/${interactive ? 'interactive' : 'passive'}: ${scenario.severity} gutter icon in ${scenario.file}`;
     try {
       await test.openFixture(scenario.file, mode, {enableClickToFix: interactive, ...scenario.settings}, 4, 0);
       const markers = () => Array.from(test.leaf.view.contentEl.querySelectorAll('.gremlins-gutter-marker'))
@@ -19,6 +23,10 @@ read -r -d '' icon_cases <<'JS' || true
         .filter(marker => getComputedStyle(marker).visibility === 'visible' && marker.getBoundingClientRect().width > 0);
       await test.waitFor(() => test.highlights('character').map(mark => mark.text).join('') === scenario.text &&
         markers().length === 1 && markers()[0].querySelector('svg'), label + ': highlighted text and one visible SVG');
+      if (scenario.severities) {
+        test.assert(JSON.stringify(test.highlights('character').map(mark => mark.severity)) === JSON.stringify(scenario.severities),
+          'Wrong character severities before checking gutter precedence');
+      }
       const marker = markers()[0];
       const svg = marker.querySelector('svg');
       test.assert(marker.classList.contains('gremlins-severity-' + scenario.severity), 'Wrong gutter severity');
@@ -72,6 +80,8 @@ read -r -d '' icon_cases <<'JS' || true
         marker.style.cssText = originalStyle;
       }
       test.assert(test.leaf.view.editor.getValue() === test.fixtures[scenario.file], 'Rendering an icon must not edit the note');
+      await test.leaf.view.save();
+      test.assert(await app.vault.read(test.leaf.view.file) === test.fixtures[scenario.file], 'Rendering an icon must not change the saved note');
       return 'PASS: ' + label;
     } catch (error) {
       throw Error(label + ': ' + error.message);
